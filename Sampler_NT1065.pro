@@ -18,10 +18,12 @@ LIBS += "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\setupapi.lib"
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    cy3device.cpp
+    cy3device.cpp \
+    dataprocessor.cpp
 
 HEADERS  += mainwindow.h \
-    cy3device.h
+    cy3device.h \
+    dataprocessor.h
 
 FORMS    += mainwindow.ui
 

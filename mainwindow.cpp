@@ -6,21 +6,36 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     qRegisterMetaType< cy3device_err_t >("cy3device_err_t");
+    qRegisterMetaType< QVector<unsigned short> >("QVector<unsigned short>");
+
+    filedumping = false;
+
+    Proc = new DataProcessor();
+    ProcThread = new QThread;
 
     Device = new cy3device("SlaveFifoSync.img");
     DeviceThread = new QThread ;
 
     ui->setupUi(this);
 
-   /* connect(ui->buttonOpenDevice,SIGNAL(clicked(bool)),
-            Device,SLOT(OpenDevice()));
+    connect(ui->checkFillCalc, SIGNAL(clicked(bool)),
+            Proc, SLOT(enableFillCalc(bool)));
 
-    connect(ui->buttonCloseDevice,SIGNAL(clicked(bool)),
-            Device,SLOT(CloseDevice()));*/
+    connect(Proc, SIGNAL(AbortDump()),
+            this, SLOT(handleAbortDump()));
+
+    connect(Device, SIGNAL(RawData(QVector<unsigned short>)),
+            Proc, SLOT(ProcessData(QVector<unsigned short>)));
+
+    connect(Proc, SIGNAL(ProcessorMessage(QString)),
+            this, SLOT(DebugParser(QString)));
 
     Device->moveToThread(DeviceThread);
 
     DeviceThread->start();
+
+    Proc->moveToThread(ProcThread);
+    ProcThread->start();
 }
 
 MainWindow::~MainWindow()
@@ -43,13 +58,28 @@ MainWindow::~MainWindow()
     DeviceThread->quit();
     while(DeviceThread->isRunning()) ;
 
+    // выключаем поток и крутим цикл пока он не завершится
+    ProcThread->quit();
+    while(ProcThread->isRunning()) ;
+
     delete Device;
     delete DeviceThread;
+
+    delete Proc;
+    delete ProcThread;
 }
 
 void MainWindow::DebugParser(QString Message)
 {
     ui->listDebug->addItem(Message);
+    ui->listDebug->scrollToBottom();
+}
+
+void MainWindow::handleAbortDump()
+{
+    filedumping = false;
+
+    ui->buttonFileDump->setText("Dump data to file");
 }
 
 void MainWindow::on_buttonOpenDevice_clicked()
@@ -156,4 +186,45 @@ void MainWindow::on_buttonStopStream_clicked()
     ui->buttonStopStream->setEnabled(false);
 
     DebugParser(QString("Streaming stopped"));
+}
+
+void MainWindow::on_buttonFileDump_clicked()
+{
+    if (filedumping)
+    {
+        filedumping = false;
+
+        QMetaObject::invokeMethod(Proc ,
+                                  "enableFileDump" ,
+                                  Qt::BlockingQueuedConnection,
+                                  Q_ARG(bool, false),
+                                  Q_ARG(QString, ui->editDumpFileName->text()),
+                                  Q_ARG(long, 0));
+        ui->buttonFileDump->setText("Dump data to file");
+    }
+    else
+    {
+        filedumping = true;
+
+        QMetaObject::invokeMethod(Proc ,
+                                  "enableFileDump" ,
+                                  Qt::BlockingQueuedConnection,
+                                  Q_ARG(bool, true),
+                                  Q_ARG(QString, ui->editDumpFileName->text()),
+                                  Q_ARG(long, ui->spinFileSize->value()));
+        ui->buttonFileDump->setText("Stop dumping");
+    }
+}
+
+void MainWindow::on_buttonSetFileName_clicked()
+{
+    QString fileName;
+    fileName = QFileDialog::getSaveFileName(this,
+        tr("Select file for signal dump"),
+        "",
+        tr("Binary files (*.bin);;All files (*.*)" )
+    );
+    if ( fileName.size() > 1 ) {
+        ui->editDumpFileName->setText( fileName );
+    }
 }

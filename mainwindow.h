@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 #include "cy3device.h"
+#include "dataprocessor.h"
+#include <QFileDialog>
 
 namespace Ui {
 class MainWindow;
@@ -12,6 +14,8 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
+private:
+    bool filedumping;
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
@@ -19,6 +23,8 @@ public:
 private slots:
     void on_buttonOpenDevice_clicked();
     void DebugParser(QString Message);
+
+    void handleAbortDump();
 
     void on_buttonCloseDevice_clicked();
 
@@ -28,11 +34,18 @@ private slots:
 
     void on_buttonStopStream_clicked();
 
+    void on_buttonFileDump_clicked();
+
+    void on_buttonSetFileName_clicked();
+
 private:
     Ui::MainWindow *ui;
 
     cy3device *Device;
     QThread *DeviceThread;
+
+    DataProcessor *Proc;
+    QThread *ProcThread;
 };
 
 #endif // MAINWINDOW_H

@@ -518,7 +518,7 @@ unsigned short mask = 0;
 
 int testDataBits16(unsigned short* data, int size)
 {
-    for ( int scount = 0; scount < size/2; scount++ )
+    for ( int scount = 0; scount < size; scount++ )
         mask |= data[scount];
     if (count_size >= 64*1024*1024)
     {
@@ -535,13 +535,12 @@ int testDataBits16(unsigned short* data, int size)
 void cy3device::processData(char *data, int size)
 {
     unsigned short* sdata = (unsigned short*) data;
-    testDataBits16(sdata, size);
+    int ssize = size/2;
+    //testDataBits16(sdata, ssize);
 
     QVector<unsigned short> qdata;
-    qdata.reserve(size/2);
-    qCopy(sdata, sdata+size/2, qdata.begin());
-    /*for (int i = 0; i < size/2; i++)
-        qdata[i] = sdata[i];*/
+    qdata.resize(ssize);
+    std::copy(sdata, sdata+ssize, qdata.begin());
 
     emit RawData(qdata);
 }
