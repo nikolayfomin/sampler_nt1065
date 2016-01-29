@@ -24,6 +24,10 @@ private slots:
 
     void on_buttonReadID_clicked();
 
+    void on_buttonStartStream_clicked();
+
+    void on_buttonStopStream_clicked();
+
 private:
     Ui::MainWindow *ui;
 

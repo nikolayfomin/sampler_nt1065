@@ -28,7 +28,7 @@ cy3device::cy3device(const char* firmwareFileName, QObject *parent) : QObject(pa
 
     CurrQueue = 0;
 
-    Params.isStreaming = false;
+    isStreaming = false;
     Params.RunStream = false;
 }
 
@@ -37,7 +37,7 @@ cy3device_err_t cy3device::OpenDevice()
     if (Params.USBDevice == NULL)
         Params.USBDevice = new CCyFX3Device();
 
-    Params.isStreaming = false;
+    isStreaming = false;
     Params.RunStream = false;
 
     int boot = 0;
@@ -50,7 +50,7 @@ cy3device_err_t cy3device::OpenDevice()
 
     if ( need_fw_load )
     {
-        fprintf( stderr, "cy3device::init() fw load needed\n" );
+        qDebug("cy3device::OpenDevice() fw load needed\n");
 
         QFileInfo checkFile(FWName);
 
@@ -74,11 +74,11 @@ cy3device_err_t cy3device::OpenDevice()
                         return FX3_ERR_CTRL_TX_FAIL;
                 }
             } else
-                fprintf( stderr, "cy3device::init() boot ok!\n" );
+                qDebug("cy3device::OpenDevice() boot ok!\n" );
 
         } else
         {
-            fprintf( stderr, "__error__ cy3device::init() StartParams.USBDevice->IsBootLoaderRunning() is FALSE\n" );
+            qDebug("__error__ cy3device::OpenDevice() StartParams.USBDevice->IsBootLoaderRunning() is FALSE\n" );
             return FX3_ERR_BAD_DEVICE;
         }
     }
@@ -86,7 +86,7 @@ cy3device_err_t cy3device::OpenDevice()
     if ( need_fw_load )
     {
         int PAUSE_AFTER_FLASH_SECONDS = 2;
-        fprintf( stderr, "cy3device::Init() flash completed!\nPlease wait for %d seconds\n", PAUSE_AFTER_FLASH_SECONDS );
+        qDebug("cy3device::OpenDevice() flash completed!\nPlease wait for %d seconds\n", PAUSE_AFTER_FLASH_SECONDS );
         for ( int i = 0; i < PAUSE_AFTER_FLASH_SECONDS * 2; i++ )
         {
             #ifdef WIN32
@@ -94,9 +94,9 @@ cy3device_err_t cy3device::OpenDevice()
             #else
             usleep( 500000 );
             #endif
-            fprintf( stderr, "*" );
+            qDebug("*" );
         }
-        fprintf( stderr, "\n" );
+        qDebug("\n" );
 
         delete Params.USBDevice;
         Params.USBDevice = new CCyFX3Device();
@@ -116,7 +116,7 @@ cy3device_err_t cy3device::OpenDevice()
     for(int i = 0; i < EndPointsCount; i++)
     {
         getEndPointParamsByInd(i, &Attr, &In, &MaxPktSize, &MaxBurst, &Interface, &Address);
-        fprintf( stderr, "cy3device::init() EndPoint[%d], Attr=%d, In=%d, MaxPktSize=%d, MaxBurst=%d, Infce=%d, Addr=%d\n",
+        qDebug("cy3device::OpenDevice() EndPoint[%d], Attr=%d, In=%d, MaxPktSize=%d, MaxBurst=%d, Infce=%d, Addr=%d\n",
                  i, Attr, In, MaxPktSize, MaxBurst, Interface, Address);
     }
 
@@ -125,24 +125,22 @@ cy3device_err_t cy3device::OpenDevice()
 
 void cy3device::CloseDevice()
 {
-    if (Params.RunStream)
-    {
-        stopTransfer();
-    }
-
     if (NULL != Params.USBDevice)
     {
         Params.USBDevice->Close();
         delete Params.USBDevice;
         Params.USBDevice = NULL;
     }
-
+    qDebug("cy3device::CloseDevice completed");
 }
 
 cy3device_err_t cy3device::WriteSPI(unsigned char Address, unsigned char Data)
 {
     if (Params.USBDevice == NULL || !Params.USBDevice->IsOpen())
+    {
+        qDebug("cy3device::WriteSPI device error");
         return FX3_ERR_BAD_DEVICE;
+    }
 
     UCHAR buf[16];
     buf[0] = (UCHAR)(Data);
@@ -158,15 +156,24 @@ cy3device_err_t cy3device::WriteSPI(unsigned char Address, unsigned char Data)
     CtrlEndPt->Index = 1;
     long len = 16;
     if (CtrlEndPt->XferData(&buf[0], len))
+    {
+        qDebug("cy3device::WriteSPI ok, Address %hhu, Data 0x%02X", Address, Data);
         return FX3_ERR_OK;
+    }
     else
+    {
+        qDebug("cy3device::WriteSPI fail");
         return FX3_ERR_CTRL_TX_FAIL;
+    }
 }
 
 cy3device_err_t cy3device::ReadSPI(unsigned char Address, unsigned char* Data)
 {
     if (Params.USBDevice == NULL || !Params.USBDevice->IsOpen())
+    {
+        qDebug("cy3device::ReadSPI device error");
         return FX3_ERR_BAD_DEVICE;
+    }
 
     UCHAR buf[16];
     //addr |= 0x8000;
@@ -185,10 +192,24 @@ cy3device_err_t cy3device::ReadSPI(unsigned char Address, unsigned char* Data)
     if (CtrlEndPt->XferData(&buf[0], len))
     {
         *Data = buf[0];
+        qDebug("cy3device::ReadSPI ok, Address %hhu, Data 0x%02X", Address, Data[0]);
         return FX3_ERR_OK;
     }
     else
+    {
+        qDebug("cy3device::ReadSPI fail");
         return FX3_ERR_CTRL_TX_FAIL;
+    }
+}
+
+void cy3device::StartStream()
+{
+    startTransfer(0, 128, 4, 1500);
+}
+
+void cy3device::StopStream()
+{
+    stopTransfer();
 }
 
 cy3device_err_t cy3device::scan(int &loadable_count, int &streamable_count)
@@ -197,24 +218,24 @@ cy3device_err_t cy3device::scan(int &loadable_count, int &streamable_count)
     loadable_count = 0;
     if (Params.USBDevice == NULL)
     {
-        fprintf( stderr, "cy3device::scan() USBDevice == NULL" );
+        qDebug("cy3device::scan() USBDevice == NULL" );
         return FX3_ERR_USB_INIT_FAIL;
     }
 
     unsigned short product = Params.USBDevice->ProductID;
     unsigned short vendor  = Params.USBDevice->VendorID;
-    fprintf( stderr, "Device: 0x%04X 0x%04X ", vendor, product );
+    qDebug("Device: 0x%04X 0x%04X ", vendor, product );
 
     if ( vendor == VENDOR_ID && product == PRODUCT_STREAM )
     {
-        fprintf( stderr, " STREAM\n" );
+        qDebug("STREAM\n" );
         streamable_count++;
     } else if ( vendor == VENDOR_ID && product == PRODUCT_BOOT )
     {
-        fprintf( stderr,  "BOOT\n" );
+        qDebug("BOOT\n" );
         loadable_count++;
     }
-    fprintf( stderr, "\n" );
+    qDebug("\n" );
 
     if (loadable_count + streamable_count == 0)
         return FX3_ERR_BAD_DEVICE;
@@ -283,10 +304,17 @@ void cy3device::getEndPointParamsByInd(unsigned int EndPointInd, int *Attr, bool
 cy3device_err_t cy3device::startTransfer(unsigned int EndPointInd, int PPX, int QueueSize, int TimeOut)
 {
     if (Params.USBDevice == NULL || !Params.USBDevice->IsOpen())
+    {
+        qDebug("cy3device::startTransfer device error");
         return FX3_ERR_BAD_DEVICE;
+    }
 
     if(EndPointInd >= Endpoints.size())
+    {
+        qDebug("cy3device::startTransfer no endpoints");
         return FX3_ERR_BAD_DEVICE;
+    }
+
     Params.CurEndPoint = Endpoints[EndPointInd];
     Params.PPX = PPX;
     Params.QueueSize = QueueSize;
@@ -298,13 +326,17 @@ cy3device_err_t cy3device::startTransfer(unsigned int EndPointInd, int PPX, int 
     if (! Params.USBDevice->SetAltIntfc(alt))
     {
         Params.USBDevice->SetAltIntfc(clrAlt); // Cleans-up
+        qDebug("cy3device::startTransfer interface error");
         return FX3_ERR_BAD_DEVICE;
     }
 
     Params.EndPt = Params.USBDevice->EndPointOf((UCHAR)eptAddr);
 
     if(Params.EndPt->MaxPktSize==0)
+    {
+        qDebug("cy3device::startTransfer endpoint transfer size zero");
         return FX3_ERR_BAD_DEVICE;
+    }
 
     // Limit total transfer length to 4MByte
     long len = ((Params.EndPt->MaxPktSize) * Params.PPX);
@@ -353,14 +385,17 @@ cy3device_err_t cy3device::startTransfer(unsigned int EndPointInd, int PPX, int 
         if (Params.EndPt->NtStatus || Params.EndPt->UsbdStatus) // BeginDataXfer failed
         {
             abortTransfer(i+1, buffers,isoPktInfos,contexts,inOvLap);
+            qDebug("cy3device::startTransfer BeginDataXfer failed");
             return FX3_ERR_BULK_IO_ERROR;
         }
     }
 
     CurrQueue = 0;
 
+    qDebug("cy3device::startTransfer initiated");
+
     Params.RunStream = true;
-    Params.isStreaming = true;
+    isStreaming = true;
     QMetaObject::invokeMethod( this, "transfer", Qt::QueuedConnection );
 
     return FX3_ERR_OK;
@@ -428,6 +463,7 @@ void cy3device::transfer()
         if (Params.EndPt->NtStatus || Params.EndPt->UsbdStatus) // BeginDataXfer failed
         {
             abortTransfer(Params.QueueSize, buffers, isoPktInfos, contexts, inOvLap);
+            qDebug("cy3device::transfer() BeginDataXfer failed");
             return;
         }
 
@@ -466,7 +502,8 @@ void cy3device::abortTransfer(int pending, PUCHAR *buffers, CCyIsoPktInfo **isoP
     delete [] contexts;
 
     Params.RunStream = false;
-    Params.isStreaming = false;
+    isStreaming = false;
+    qDebug("cy3device::abortTransfer completed");
 }
 
 void cy3device::stopTransfer()
@@ -474,9 +511,6 @@ void cy3device::stopTransfer()
     if(!Params.RunStream)
         return;
     Params.RunStream = false;
-
-    while(Params.isStreaming)
-        Sleep(1);
 }
 
 unsigned int count_size = 0;
@@ -490,7 +524,7 @@ int testDataBits16(unsigned short* data, int size)
     {
         qDebug() << "mask: " << hex << mask;
         count_size = 0;
-        //mask = 0;
+        mask = 0;
     }
     else
         count_size += size;
@@ -500,5 +534,14 @@ int testDataBits16(unsigned short* data, int size)
 
 void cy3device::processData(char *data, int size)
 {
-    testDataBits16((unsigned short*) data, size);
+    unsigned short* sdata = (unsigned short*) data;
+    testDataBits16(sdata, size);
+
+    QVector<unsigned short> qdata;
+    qdata.reserve(size/2);
+    qCopy(sdata, sdata+size/2, qdata.begin());
+    /*for (int i = 0; i < size/2; i++)
+        qdata[i] = sdata[i];*/
+
+    emit RawData(qdata);
 }

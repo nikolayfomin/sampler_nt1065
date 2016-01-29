@@ -27,6 +27,14 @@ MainWindow::~MainWindow()
 {
     delete ui;
 
+    if (Device->isStreaming)
+        QMetaObject::invokeMethod(Device ,
+                                  "StopStream" ,
+                                  Qt::BlockingQueuedConnection);
+
+    while (Device->isStreaming)
+        Sleep(1);
+
     QMetaObject::invokeMethod(Device ,
                               "CloseDevice" ,
                               Qt::BlockingQueuedConnection);
@@ -67,6 +75,14 @@ void MainWindow::on_buttonOpenDevice_clicked()
 
 void MainWindow::on_buttonCloseDevice_clicked()
 {
+    if (Device->isStreaming)
+        QMetaObject::invokeMethod(Device ,
+                                  "StopStream" ,
+                                  Qt::BlockingQueuedConnection);
+
+    while (Device->isStreaming)
+        Sleep(1);
+
     QMetaObject::invokeMethod(Device ,
                               "CloseDevice" ,
                               Qt::BlockingQueuedConnection);
@@ -113,4 +129,31 @@ void MainWindow::on_buttonReadID_clicked()
     int Rev = data[1] & 0x07;
 
     DebugParser(QString("ID: %1, Rev: %2").arg(ID).arg(Rev));
+}
+
+void MainWindow::on_buttonStartStream_clicked()
+{
+    QMetaObject::invokeMethod(Device ,
+                              "StartStream" ,
+                              Qt::BlockingQueuedConnection);
+
+    ui->buttonStartStream->setEnabled(false);
+    ui->buttonStopStream->setEnabled(true);
+
+    DebugParser(QString("Streaming started"));
+}
+
+void MainWindow::on_buttonStopStream_clicked()
+{
+    QMetaObject::invokeMethod(Device ,
+                              "StopStream" ,
+                              Qt::BlockingQueuedConnection);
+
+    while(Device->isStreaming)
+        Sleep(1);
+
+    ui->buttonStartStream->setEnabled(true);
+    ui->buttonStopStream->setEnabled(false);
+
+    DebugParser(QString("Streaming stopped"));
 }

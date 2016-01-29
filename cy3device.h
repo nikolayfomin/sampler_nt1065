@@ -2,8 +2,10 @@
 #define CY3DEVICE_H
 
 #include <QtCore>
+#include <QDebug>
 #include <QObject>
 #include <QString>
+#include <QVector>
 #include <windows.h>
 #include <vector>
 #include "library\inc\CyAPI.h"
@@ -50,7 +52,6 @@ struct DeviceParams{
     bool			bHighSpeedDevice;
     bool			bSuperSpeedDevice;
     bool			RunStream;
-    bool            isStreaming;
     EndPointParams  CurEndPoint;
 };
 
@@ -81,9 +82,9 @@ private:
     void getEndPointParamsByInd(unsigned int EndPointInd, int *Attr, bool *In, int *MaxPktSize, int *MaxBurst, int *Interface, int *Address);
 
     cy3device_err_t startTransfer(unsigned int EndPointInd, int PPX, int QueueSize, int TimeOut);
-    void transfer();
+    Q_INVOKABLE void transfer();
     void abortTransfer(int pending, PUCHAR *buffers, CCyIsoPktInfo **isoPktInfos, PUCHAR *contexts, OVERLAPPED *inOvLap);
-    void stopTransfer();
+    Q_INVOKABLE void stopTransfer();
 
     void processData(char* data, int size);
 public:
@@ -95,8 +96,12 @@ public:
     int Read16bitSPI(unsigned char addr, unsigned char* data);
     int Send16bitSPI(unsigned char addr, unsigned char data);*/
 
+    bool isStreaming;
+
 signals:
     void DebugMessage(QString Message);
+
+    void RawData(QVector<unsigned short> qdata);
 
 public slots:
     cy3device_err_t OpenDevice();
@@ -104,6 +109,9 @@ public slots:
 
     cy3device_err_t WriteSPI(unsigned char Address, unsigned char Data);
     cy3device_err_t ReadSPI(unsigned char Address, unsigned char *Data);
+
+    void StartStream();
+    void StopStream();
 };
 
 #endif // CY3DEVICE_H
