@@ -1,5 +1,23 @@
 #include "cy3device.h"
 
+const char* cy3device_get_error_string(cy3device_err_t error) {
+    switch ( error ) {
+        case FX3_ERR_OK:                        return "FX3_ERR_OK";
+        case FX3_ERR_DRV_NOT_IMPLEMENTED:       return "FX3_ERR_DRV_NOT_IMPLEMENTED";
+        case FX3_ERR_USB_INIT_FAIL:             return "FX3_ERR_USB_INIT_FAIL";
+        case FX3_ERR_NO_DEVICE_FOUND:           return "FX3_ERR_NO_DEVICE_FOUND";
+        case FX3_ERR_BAD_DEVICE:                return "FX3_ERR_BAD_DEVICE";
+        case FX3_ERR_FIRMWARE_FILE_IO_ERROR:    return "FX3_ERR_FIRMWARE_FILE_IO_ERROR";
+        case FX3_ERR_FIRMWARE_FILE_CORRUPTED:   return "FX3_ERR_FIRMWARE_FILE_CORRUPTED";
+        case FX3_ERR_ADDFIRMWARE_FILE_IO_ERROR: return "FX3_ERR_ADDFIRMWARE_FILE_IO_ERROR";
+        case FX3_ERR_REG_WRITE_FAIL:            return "FX3_ERR_REG_WRITE_FAIL";
+        case FX3_ERR_FW_TOO_MANY_ERRORS:        return "FX3_ERR_FW_TOO_MANY_ERRORS";
+        case FX3_ERR_CTRL_TX_FAIL:              return "FX3_ERR_CTRL_TX_FAIL";
+        default:                                return "FX3_ERR_UNKNOWN_ERROR";
+    }
+
+}
+
 cy3device::cy3device(const char* firmwareFileName, QObject *parent) : QObject(parent)
 {
     FWName = firmwareFileName;
@@ -9,14 +27,18 @@ cy3device::cy3device(const char* firmwareFileName, QObject *parent) : QObject(pa
     Failures = 0;
 
     CurrQueue = 0;
+
+    Params.isStreaming = false;
+    Params.RunStream = false;
 }
 
 cy3device_err_t cy3device::OpenDevice()
 {
-    Device.USBDevice = new CCyFX3Device();
+    if (Params.USBDevice == NULL)
+        Params.USBDevice = new CCyFX3Device();
 
-    Device.isStreaming = false;
-    Device.RunStream = false;
+    Params.isStreaming = false;
+    Params.RunStream = false;
 
     int boot = 0;
     int stream = 0;
@@ -35,9 +57,9 @@ cy3device_err_t cy3device::OpenDevice()
         if (!(checkFile.exists() && checkFile.isFile()))
             return FX3_ERR_FIRMWARE_FILE_IO_ERROR;
 
-        if ( Device.USBDevice->IsBootLoaderRunning() )
+        if ( Params.USBDevice->IsBootLoaderRunning() )
         {
-            int retCode  = Device.USBDevice->DownloadFw((char*)FWName.toStdString().c_str(), FX3_FWDWNLOAD_MEDIA_TYPE::RAM);
+            int retCode  = Params.USBDevice->DownloadFw((char*)FWName.toStdString().c_str(), FX3_FWDWNLOAD_MEDIA_TYPE::RAM);
 
             if ( retCode != FX3_FWDWNLOAD_ERROR_CODE::SUCCESS )
             {
@@ -76,8 +98,8 @@ cy3device_err_t cy3device::OpenDevice()
         }
         fprintf( stderr, "\n" );
 
-        delete Device.USBDevice;
-        Device.USBDevice = new CCyFX3Device();
+        delete Params.USBDevice;
+        Params.USBDevice = new CCyFX3Device();
         res = scan( boot, stream );
         if ( res != FX3_ERR_OK )
             return res;
@@ -103,23 +125,31 @@ cy3device_err_t cy3device::OpenDevice()
 
 void cy3device::CloseDevice()
 {
-    if (Device.RunStream)
+    if (Params.RunStream)
     {
-        stopStream();
+        stopTransfer();
     }
 
-    if (NULL != Device.USBDevice)
-        delete Device.USBDevice;
+    if (NULL != Params.USBDevice)
+    {
+        Params.USBDevice->Close();
+        delete Params.USBDevice;
+        Params.USBDevice = NULL;
+    }
+
 }
 
-void cy3device::WriteSPI(unsigned char Address, unsigned char Data)
+cy3device_err_t cy3device::WriteSPI(unsigned char Address, unsigned char Data)
 {
+    if (Params.USBDevice == NULL || !Params.USBDevice->IsOpen())
+        return FX3_ERR_BAD_DEVICE;
+
     UCHAR buf[16];
     buf[0] = (UCHAR)(Data);
     buf[1] = (UCHAR)(Address);
 
     CCyControlEndPoint* CtrlEndPt;
-    CtrlEndPt = Device.USBDevice->ControlEndPt;
+    CtrlEndPt = Params.USBDevice->ControlEndPt;
     CtrlEndPt->Target = TGT_DEVICE;
     CtrlEndPt->ReqType = REQ_VENDOR;
     CtrlEndPt->Direction = DIR_TO_DEVICE;
@@ -127,18 +157,24 @@ void cy3device::WriteSPI(unsigned char Address, unsigned char Data)
     CtrlEndPt->Value = 0;
     CtrlEndPt->Index = 1;
     long len = 16;
-    CtrlEndPt->XferData(&buf[0], len);
+    if (CtrlEndPt->XferData(&buf[0], len))
+        return FX3_ERR_OK;
+    else
+        return FX3_ERR_CTRL_TX_FAIL;
 }
 
-unsigned char cy3device::ReadSPI(unsigned char Address)
+cy3device_err_t cy3device::ReadSPI(unsigned char Address, unsigned char* Data)
 {
+    if (Params.USBDevice == NULL || !Params.USBDevice->IsOpen())
+        return FX3_ERR_BAD_DEVICE;
+
     UCHAR buf[16];
     //addr |= 0x8000;
     buf[0] = (UCHAR)0xFF;
     buf[1] = (UCHAR)(Address|0x80);
 
     CCyControlEndPoint* CtrlEndPt;
-    CtrlEndPt = Device.USBDevice->ControlEndPt;
+    CtrlEndPt = Params.USBDevice->ControlEndPt;
     CtrlEndPt->Target = TGT_DEVICE;
     CtrlEndPt->ReqType = REQ_VENDOR;
     CtrlEndPt->Direction = DIR_FROM_DEVICE;
@@ -146,23 +182,27 @@ unsigned char cy3device::ReadSPI(unsigned char Address)
     CtrlEndPt->Value = 0;
     CtrlEndPt->Index = Address|0x80;
     long len = 16;
-    CtrlEndPt->XferData(&buf[0], len);
-
-    return buf[0];
+    if (CtrlEndPt->XferData(&buf[0], len))
+    {
+        *Data = buf[0];
+        return FX3_ERR_OK;
+    }
+    else
+        return FX3_ERR_CTRL_TX_FAIL;
 }
 
 cy3device_err_t cy3device::scan(int &loadable_count, int &streamable_count)
 {
     streamable_count = 0;
     loadable_count = 0;
-    if (Device.USBDevice == NULL)
+    if (Params.USBDevice == NULL)
     {
         fprintf( stderr, "cy3device::scan() USBDevice == NULL" );
         return FX3_ERR_USB_INIT_FAIL;
     }
 
-    unsigned short product = Device.USBDevice->ProductID;
-    unsigned short vendor  = Device.USBDevice->VendorID;
+    unsigned short product = Params.USBDevice->ProductID;
+    unsigned short vendor  = Params.USBDevice->VendorID;
     fprintf( stderr, "Device: 0x%04X 0x%04X ", vendor, product );
 
     if ( vendor == VENDOR_ID && product == PRODUCT_STREAM )
@@ -185,27 +225,29 @@ cy3device_err_t cy3device::scan(int &loadable_count, int &streamable_count)
 
 cy3device_err_t cy3device::prepareEndPoints()
 {
-    if ( ( Device.USBDevice->VendorID != VENDOR_ID) ||
-         ( Device.USBDevice->ProductID != PRODUCT_STREAM ) )
+    if ( ( Params.USBDevice->VendorID != VENDOR_ID) ||
+         ( Params.USBDevice->ProductID != PRODUCT_STREAM ) )
     {
         return FX3_ERR_BAD_DEVICE;
     }
 
-    int interfaces = Device.USBDevice->AltIntfcCount()+1;
+    int interfaces = Params.USBDevice->AltIntfcCount()+1;
 
-    Device.bHighSpeedDevice = Device.USBDevice->bHighSpeed;
-    Device.bSuperSpeedDevice = Device.USBDevice->bSuperSpeed;
+    Params.bHighSpeedDevice = Params.USBDevice->bHighSpeed;
+    Params.bSuperSpeedDevice = Params.USBDevice->bSuperSpeed;
+
+    Endpoints.clear();
 
     for (int i=0; i< interfaces; i++)
     {
-        Device.USBDevice->SetAltIntfc(i);
+        Params.USBDevice->SetAltIntfc(i);
 
-        int eptCnt = Device.USBDevice->EndPointCount();
+        int eptCnt = Params.USBDevice->EndPointCount();
 
         // Fill the EndPointsBox
         for (int e=1; e<eptCnt; e++)
         {
-            CCyUSBEndPoint *ept = Device.USBDevice->EndPoints[e];
+            CCyUSBEndPoint *ept = Params.USBDevice->EndPoints[e];
             // INTR, BULK and ISO endpoints are supported.
             if ((ept->Attributes >= 1) && (ept->Attributes <= 3))
             {
@@ -213,7 +255,7 @@ cy3device_err_t cy3device::prepareEndPoints()
                 EP.Attr = ept->Attributes;
                 EP.In = ept->bIn;
                 EP.MaxPktSize = ept->MaxPktSize;
-                EP.MaxBurst = Device.USBDevice->BcdUSB == 0x0300 ? ept->ssmaxburst : 0;
+                EP.MaxBurst = Params.USBDevice->BcdUSB == 0x0300 ? ept->ssmaxburst : 0;
                 EP.Interface = i;
                 EP.Address = ept->Address;
 
@@ -238,44 +280,47 @@ void cy3device::getEndPointParamsByInd(unsigned int EndPointInd, int *Attr, bool
     *Address = Endpoints[EndPointInd].Address;
 }
 
-void cy3device::startStream(unsigned int EndPointInd, int PPX, int QueueSize, int TimeOut)
+cy3device_err_t cy3device::startTransfer(unsigned int EndPointInd, int PPX, int QueueSize, int TimeOut)
 {
-    if(EndPointInd >= Endpoints.size())
-        return;
-    Device.CurEndPoint = Endpoints[EndPointInd];
-    Device.PPX = PPX;
-    Device.QueueSize = QueueSize;
-    Device.TimeOut = TimeOut;
+    if (Params.USBDevice == NULL || !Params.USBDevice->IsOpen())
+        return FX3_ERR_BAD_DEVICE;
 
-    int alt = Device.CurEndPoint.Interface;
-    int eptAddr = Device.CurEndPoint.Address;
-    int clrAlt = (Device.USBDevice->AltIntfc() == 0) ? 1 : 0;
-    if (! Device.USBDevice->SetAltIntfc(alt))
+    if(EndPointInd >= Endpoints.size())
+        return FX3_ERR_BAD_DEVICE;
+    Params.CurEndPoint = Endpoints[EndPointInd];
+    Params.PPX = PPX;
+    Params.QueueSize = QueueSize;
+    Params.TimeOut = TimeOut;
+
+    int alt = Params.CurEndPoint.Interface;
+    int eptAddr = Params.CurEndPoint.Address;
+    int clrAlt = (Params.USBDevice->AltIntfc() == 0) ? 1 : 0;
+    if (! Params.USBDevice->SetAltIntfc(alt))
     {
-        Device.USBDevice->SetAltIntfc(clrAlt); // Cleans-up
-        return;
+        Params.USBDevice->SetAltIntfc(clrAlt); // Cleans-up
+        return FX3_ERR_BAD_DEVICE;
     }
 
-    Device.EndPt = Device.USBDevice->EndPointOf((UCHAR)eptAddr);
+    Params.EndPt = Params.USBDevice->EndPointOf((UCHAR)eptAddr);
 
-    if(Device.EndPt->MaxPktSize==0)
-        return;
+    if(Params.EndPt->MaxPktSize==0)
+        return FX3_ERR_BAD_DEVICE;
 
     // Limit total transfer length to 4MByte
-    long len = ((Device.EndPt->MaxPktSize) * Device.PPX);
+    long len = ((Params.EndPt->MaxPktSize) * Params.PPX);
 
     int maxLen = MAX_TRANSFER_LENGTH;  //4MByte
     if (len > maxLen){
-        Device.PPX = maxLen / (Device.EndPt->MaxPktSize);
-        if((Device.PPX%8)!=0)
-            Device.PPX -= (Device.PPX%8);
+        Params.PPX = maxLen / (Params.EndPt->MaxPktSize);
+        if((Params.PPX%8)!=0)
+            Params.PPX -= (Params.PPX%8);
     }
 
-    if ((Device.bSuperSpeedDevice || Device.bHighSpeedDevice) && (Device.EndPt->Attributes == 1)){  // HS/SS ISOC Xfers must use PPX >= 8
-        Device.PPX = max(Device.PPX, 8);
-        Device.PPX = (Device.PPX / 8) * 8;
-        if(Device.bHighSpeedDevice)
-            Device.PPX = max(Device.PPX, 128);
+    if ((Params.bSuperSpeedDevice || Params.bHighSpeedDevice) && (Params.EndPt->Attributes == 1)){  // HS/SS ISOC Xfers must use PPX >= 8
+        Params.PPX = max(Params.PPX, 8);
+        Params.PPX = (Params.PPX / 8) * 8;
+        if(Params.bHighSpeedDevice)
+            Params.PPX = max(Params.PPX, 128);
     }
 
     BytesXferred = 0;
@@ -283,71 +328,73 @@ void cy3device::startStream(unsigned int EndPointInd, int PPX, int QueueSize, in
     Failures = 0;
 
     // Allocate the arrays needed for queueing
-    buffers		= new PUCHAR[Device.QueueSize];
-    isoPktInfos	= new CCyIsoPktInfo*[Device.QueueSize];
-    contexts		= new PUCHAR[Device.QueueSize];
+    buffers		= new PUCHAR[Params.QueueSize];
+    isoPktInfos	= new CCyIsoPktInfo*[Params.QueueSize];
+    contexts		= new PUCHAR[Params.QueueSize];
 
-    Device.TransferSize = ((Device.EndPt->MaxPktSize) * Device.PPX);
+    Params.TransferSize = ((Params.EndPt->MaxPktSize) * Params.PPX);
 
-    Device.EndPt->SetXferSize(Device.TransferSize);
+    Params.EndPt->SetXferSize(Params.TransferSize);
 
     // Allocate all the buffers for the queues
-    for (int i=0; i< Device.QueueSize; i++)
+    for (int i=0; i< Params.QueueSize; i++)
     {
-        buffers[i]        = new UCHAR[Device.TransferSize];
-        isoPktInfos[i]    = new CCyIsoPktInfo[Device.PPX];
+        buffers[i]        = new UCHAR[Params.TransferSize];
+        isoPktInfos[i]    = new CCyIsoPktInfo[Params.PPX];
         inOvLap[i].hEvent = CreateEvent(NULL, false, false, NULL);
 
-        memset(buffers[i],0xEF,Device.TransferSize);
+        memset(buffers[i],0xEF,Params.TransferSize);
     }
 
     // Queue-up the first batch of transfer requests
-    for (int i=0; i< Device.QueueSize; i++)
+    for (int i=0; i< Params.QueueSize; i++)
     {
-        contexts[i] = Device.EndPt->BeginDataXfer(buffers[i], Device.TransferSize, &inOvLap[i]);
-        if (Device.EndPt->NtStatus || Device.EndPt->UsbdStatus) // BeginDataXfer failed
+        contexts[i] = Params.EndPt->BeginDataXfer(buffers[i], Params.TransferSize, &inOvLap[i]);
+        if (Params.EndPt->NtStatus || Params.EndPt->UsbdStatus) // BeginDataXfer failed
         {
             abortTransfer(i+1, buffers,isoPktInfos,contexts,inOvLap);
-            return;
+            return FX3_ERR_BULK_IO_ERROR;
         }
     }
 
     CurrQueue = 0;
 
-    Device.RunStream = true;
-    Device.isStreaming = true;
+    Params.RunStream = true;
+    Params.isStreaming = true;
     QMetaObject::invokeMethod( this, "transfer", Qt::QueuedConnection );
+
+    return FX3_ERR_OK;
 }
 
 void cy3device::transfer()
 {
-    if (!Device.RunStream)
+    if (!Params.RunStream)
     {
         // Memory clean-up
-        abortTransfer(Device.QueueSize, buffers, isoPktInfos, contexts, inOvLap);
+        abortTransfer(Params.QueueSize, buffers, isoPktInfos, contexts, inOvLap);
         return;
     }
 
     else
     {
-        long rLen = Device.TransferSize;	// Reset this each time through because
+        long rLen = Params.TransferSize;	// Reset this each time through because
         // FinishDataXfer may modify it
 
-        if (!Device.EndPt->WaitForXfer(&inOvLap[CurrQueue], Device.TimeOut))
+        if (!Params.EndPt->WaitForXfer(&inOvLap[CurrQueue], Params.TimeOut))
         {
-            Device.EndPt->Abort();
-            if (Device.EndPt->LastError == ERROR_IO_PENDING)
+            Params.EndPt->Abort();
+            if (Params.EndPt->LastError == ERROR_IO_PENDING)
                 WaitForSingleObject(inOvLap[CurrQueue].hEvent,2000);
         }
 
-        if (Device.EndPt->Attributes == 1) // ISOC Endpoint
+        if (Params.EndPt->Attributes == 1) // ISOC Endpoint
         {
-            if (Device.EndPt->FinishDataXfer(buffers[CurrQueue], rLen, &inOvLap[CurrQueue], contexts[CurrQueue], isoPktInfos[CurrQueue]))
+            if (Params.EndPt->FinishDataXfer(buffers[CurrQueue], rLen, &inOvLap[CurrQueue], contexts[CurrQueue], isoPktInfos[CurrQueue]))
             {
                 CCyIsoPktInfo *pkts = isoPktInfos[CurrQueue];
-                for (int j=0; j< Device.PPX; j++)
+                for (int j=0; j< Params.PPX; j++)
                 {
-                    if ((pkts[j].Status == 0) && (pkts[j].Length <= Device.EndPt->MaxPktSize))
+                    if ((pkts[j].Status == 0) && (pkts[j].Length <= Params.EndPt->MaxPktSize))
                     {
                         BytesXferred += pkts[j].Length;
                         Successes++;
@@ -363,7 +410,7 @@ void cy3device::transfer()
         }
         else // BULK Endpoint
         {
-            if (Device.EndPt->FinishDataXfer(buffers[CurrQueue], rLen, &inOvLap[CurrQueue], contexts[CurrQueue]))
+            if (Params.EndPt->FinishDataXfer(buffers[CurrQueue], rLen, &inOvLap[CurrQueue], contexts[CurrQueue]))
             {
                 Successes++;
                 BytesXferred += rLen;
@@ -377,14 +424,14 @@ void cy3device::transfer()
         processData((char*)buffers[CurrQueue], rLen);
 
         // Re-submit this queue element to keep the queue full
-        contexts[CurrQueue] = Device.EndPt->BeginDataXfer(buffers[CurrQueue], Device.TransferSize, &inOvLap[CurrQueue]);
-        if (Device.EndPt->NtStatus || Device.EndPt->UsbdStatus) // BeginDataXfer failed
+        contexts[CurrQueue] = Params.EndPt->BeginDataXfer(buffers[CurrQueue], Params.TransferSize, &inOvLap[CurrQueue]);
+        if (Params.EndPt->NtStatus || Params.EndPt->UsbdStatus) // BeginDataXfer failed
         {
-            abortTransfer(Device.QueueSize, buffers, isoPktInfos, contexts, inOvLap);
+            abortTransfer(Params.QueueSize, buffers, isoPktInfos, contexts, inOvLap);
             return;
         }
 
-        CurrQueue = (CurrQueue + 1) % Device.QueueSize;
+        CurrQueue = (CurrQueue + 1) % Params.QueueSize;
 
         QMetaObject::invokeMethod( this, "transfer", Qt::QueuedConnection );
     }  // End of the transfer loop
@@ -392,20 +439,20 @@ void cy3device::transfer()
 
 void cy3device::abortTransfer(int pending, PUCHAR *buffers, CCyIsoPktInfo **isoPktInfos, PUCHAR *contexts, OVERLAPPED *inOvLap)
 {
-    long len = Device.EndPt->MaxPktSize * Device.PPX;
+    long len = Params.EndPt->MaxPktSize * Params.PPX;
 
-    for (int j=0; j< Device.QueueSize; j++)
+    for (int j=0; j< Params.QueueSize; j++)
     {
         if (j<pending)
         {
-            if (!Device.EndPt->WaitForXfer(&inOvLap[j], Device.TimeOut))
+            if (!Params.EndPt->WaitForXfer(&inOvLap[j], Params.TimeOut))
             {
-                Device.EndPt->Abort();
-                if (Device.EndPt->LastError == ERROR_IO_PENDING)
+                Params.EndPt->Abort();
+                if (Params.EndPt->LastError == ERROR_IO_PENDING)
                     WaitForSingleObject(inOvLap[j].hEvent,2000);
             }
 
-            Device.EndPt->FinishDataXfer(buffers[j], len, &inOvLap[j], contexts[j]);
+            Params.EndPt->FinishDataXfer(buffers[j], len, &inOvLap[j], contexts[j]);
         }
 
         CloseHandle(inOvLap[j].hEvent);
@@ -418,17 +465,17 @@ void cy3device::abortTransfer(int pending, PUCHAR *buffers, CCyIsoPktInfo **isoP
     delete [] isoPktInfos;
     delete [] contexts;
 
-    Device.RunStream = false;
-    Device.isStreaming = false;
+    Params.RunStream = false;
+    Params.isStreaming = false;
 }
 
-void cy3device::stopStream()
+void cy3device::stopTransfer()
 {
-    if(!Device.RunStream)
+    if(!Params.RunStream)
         return;
-    Device.RunStream = false;
+    Params.RunStream = false;
 
-    while(Device.isStreaming)
+    while(Params.isStreaming)
         Sleep(1);
 }
 

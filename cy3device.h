@@ -25,8 +25,11 @@ enum cy3device_err_t {
     FX3_ERR_ADDFIRMWARE_FILE_IO_ERROR = -25,
     FX3_ERR_REG_WRITE_FAIL            = -32,
     FX3_ERR_FW_TOO_MANY_ERRORS        = -33,
-    FX3_ERR_CTRL_TX_FAIL              = -35
+    FX3_ERR_CTRL_TX_FAIL              = -35,
+    FX3_ERR_BULK_IO_ERROR             = -37
 };
+
+const char* cy3device_get_error_string(cy3device_err_t error);
 
 struct EndPointParams{
     int Attr;
@@ -38,8 +41,8 @@ struct EndPointParams{
 };
 
 struct DeviceParams{
-    CCyFX3Device	*USBDevice;
-    CCyUSBEndPoint  *EndPt;
+    CCyFX3Device	*USBDevice = NULL;
+    CCyUSBEndPoint  *EndPt = NULL;
     int				PPX;
     long            TransferSize;
     int				QueueSize;
@@ -58,7 +61,7 @@ class cy3device : public QObject
 private:
     QString FWName;
 
-    DeviceParams Device;
+    DeviceParams Params;
     std::vector<EndPointParams> Endpoints;
 
 
@@ -77,20 +80,14 @@ private:
     cy3device_err_t prepareEndPoints();
     void getEndPointParamsByInd(unsigned int EndPointInd, int *Attr, bool *In, int *MaxPktSize, int *MaxBurst, int *Interface, int *Address);
 
-    void startStream(unsigned int EndPointInd, int PPX, int QueueSize, int TimeOut);
+    cy3device_err_t startTransfer(unsigned int EndPointInd, int PPX, int QueueSize, int TimeOut);
     void transfer();
     void abortTransfer(int pending, PUCHAR *buffers, CCyIsoPktInfo **isoPktInfos, PUCHAR *contexts, OVERLAPPED *inOvLap);
-    void stopStream();
+    void stopTransfer();
 
     void processData(char* data, int size);
 public:
     explicit cy3device(const char* firmwareFileName, QObject *parent = 0);
-
-    cy3device_err_t OpenDevice();
-    void CloseDevice();
-
-    void WriteSPI(unsigned char Address, unsigned char Data);
-    unsigned char ReadSPI(unsigned char Address);
 
     /*int ReviewDevices();
     int LoadRAM(const char* fwFileName);
@@ -99,8 +96,14 @@ public:
     int Send16bitSPI(unsigned char addr, unsigned char data);*/
 
 signals:
+    void DebugMessage(QString Message);
 
 public slots:
+    cy3device_err_t OpenDevice();
+    void CloseDevice();
+
+    cy3device_err_t WriteSPI(unsigned char Address, unsigned char Data);
+    cy3device_err_t ReadSPI(unsigned char Address, unsigned char *Data);
 };
 
 #endif // CY3DEVICE_H
