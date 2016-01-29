@@ -24,3 +24,13 @@ HEADERS  += mainwindow.h \
     cy3device.h
 
 FORMS    += mainwindow.ui
+
+win32-msvc2013 {
+    HEADERS += vld/vld.h
+
+    LIBS += -L$$PWD/vld/ -vld
+    INCLUDEPATH += $$PWD/vld
+    DEPENDPATH += $$PWD/vld
+
+    PRE_TARGETDEPS += $$PWD/vld/vld.lib
+}
