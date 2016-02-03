@@ -14,16 +14,19 @@ class DataProcessor : public QObject
     Q_OBJECT
 
 private:
-    const UINT64 MAX_FILL_SAMPLES = 16*1024*1024;
+    const int MAX_SAMPLES = 2*1024*1024;
+    int sample_count;
+
+    QVector<unsigned short> data_pack;
 
     const int FFT_SAMPLES_PER_FRAME = 5300;
-    const int FFT_SKIP_FRAMES = 100;
+    const int FFT_SKIP_FRAMES = 5;
 
+    int fill_sample_count;
     int cnt_ch1[4];
     int cnt_ch2[4];
     int cnt_ch3[4];
     int cnt_ch4[4];
-    UINT64 sample_count;
 
     QFile *dumpfile;
     QString dumpfilename;
@@ -39,13 +42,13 @@ private:
     int fftw_cnt;
 
     bool enFillCalc;
-    void FillCalc(QVector<unsigned short> qdata);
+    void FillCalc();
 
     bool enFileDump;
-    void FileDump(QVector<unsigned short> qdata);
+    void FileDump();
 
     bool enFFT;
-    void FFTCalc(QVector<unsigned short> qdata);
+    void FFTCalc();
 public:
     explicit DataProcessor(QObject *parent = 0);
     ~DataProcessor();

@@ -4,13 +4,16 @@ int decode_samples[4] = {1, 3, -1, -3};
 
 DataProcessor::DataProcessor(QObject *parent) : QObject(parent)
 {
+    data_pack.resize(2*MAX_SAMPLES);
+    sample_count = 0;
+
+    fill_sample_count = 0;
     std::fill( cnt_ch1, cnt_ch1 + 4, 0 );
     std::fill( cnt_ch2, cnt_ch2 + 4, 0 );
     std::fill( cnt_ch3, cnt_ch3 + 4, 0 );
     std::fill( cnt_ch4, cnt_ch4 + 4, 0 );
-    sample_count = 0;
-    dump_count = 0;
 
+    dump_count = 0;
     dumpfile = NULL;
     dump_limit = 0;
 
@@ -53,26 +56,26 @@ DataProcessor::~DataProcessor()
     fftwf_destroy_plan(fftw_pl);
 }
 
-void DataProcessor::FillCalc(QVector<unsigned short> qdata)
+void DataProcessor::FillCalc()
 {
-    foreach(unsigned short data, qdata)
+    for(int i = 0; i < sample_count; i++)
     {
-        sample_count++;
-        cnt_ch1[(data & 0x03) >> 0]++;
-        cnt_ch2[(data & 0x0C) >> 2]++;
-        cnt_ch3[(data & 0x30) >> 4]++;
-        cnt_ch4[(data & 0xC0) >> 6]++;
+        cnt_ch1[(data_pack[i] & 0x03) >> 0]++;
+        cnt_ch2[(data_pack[i] & 0x0C) >> 2]++;
+        cnt_ch3[(data_pack[i] & 0x30) >> 4]++;
+        cnt_ch4[(data_pack[i] & 0xC0) >> 6]++;
+        fill_sample_count++;
     }
 
-    if (sample_count > MAX_FILL_SAMPLES)
+    if (fill_sample_count >= 4*MAX_SAMPLES)
     {
         double fill1[4],fill2[4],fill3[4],fill4[4];
         for (int i = 0; i < 4; i++)
         {
-            fill1[i] = 100.0 * cnt_ch1[i]/sample_count;
-            fill2[i] = 100.0 * cnt_ch2[i]/sample_count;
-            fill3[i] = 100.0 * cnt_ch3[i]/sample_count;
-            fill4[i] = 100.0 * cnt_ch4[i]/sample_count;
+            fill1[i] = 100.0 * cnt_ch1[i]/fill_sample_count;
+            fill2[i] = 100.0 * cnt_ch2[i]/fill_sample_count;
+            fill3[i] = 100.0 * cnt_ch3[i]/fill_sample_count;
+            fill4[i] = 100.0 * cnt_ch4[i]/fill_sample_count;
         }
         //                                          -3        -1        1         3
         qDebug(" ");
@@ -88,24 +91,23 @@ void DataProcessor::FillCalc(QVector<unsigned short> qdata)
         msg += QString("Channel3 fill: %1 %2 %3 %4\n").arg(fill3[3]).arg(fill3[2]).arg(fill3[0]).arg(fill3[1]);
         msg += QString("Channel4 fill: %1 %2 %3 %4\n").arg(fill4[3]).arg(fill4[2]).arg(fill4[0]).arg(fill4[1]);
 
-        qDebug() << msg;
-
         emit ProcessorMessage(msg);
 
         std::fill( cnt_ch1, cnt_ch1 + 4, 0 );
         std::fill( cnt_ch2, cnt_ch2 + 4, 0 );
         std::fill( cnt_ch3, cnt_ch3 + 4, 0 );
         std::fill( cnt_ch4, cnt_ch4 + 4, 0 );
-        sample_count = 0;
+
+        fill_sample_count = 0;
     }
 }
 
-void DataProcessor::FileDump(QVector<unsigned short> qdata)
+void DataProcessor::FileDump()
 {
     if (!enFileDump || !dumpfile->isOpen())
         return;
 
-    foreach(unsigned short data, qdata)
+    for(int i = 0; i < sample_count; i++)
     {
         if (dump_limit && dump_count >= dump_limit)
         {
@@ -115,17 +117,20 @@ void DataProcessor::FileDump(QVector<unsigned short> qdata)
 
             return;
         }
-        unsigned char cdata = data & 0xFF;
+        unsigned char cdata = data_pack[i] & 0xFF;
         //fputc(cdata, dumpfile);
         dumpfile->write((const char*)&cdata,1);
         dump_count++;
     }
 }
 
-void DataProcessor::FFTCalc(QVector<unsigned short> qdata)
+void DataProcessor::FFTCalc()
 {
+    if (sample_count < FFT_SAMPLES_PER_FRAME)
+        return;
+
     // skip frames so that we don't spam FFT too much
-    if (--fftw_cnt)
+    if (fftw_cnt--)
         return;
 
     fftw_cnt = fft_skipframes;
@@ -134,7 +139,7 @@ void DataProcessor::FFTCalc(QVector<unsigned short> qdata)
     if (fft_ChEn[0])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fftw_in[i] = decode_samples[(qdata[i]&0x03)>>0];
+            fftw_in[i] = decode_samples[(data_pack[i]&0x03)>>0];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
         fftwf_execute(fftw_pl);
@@ -148,7 +153,7 @@ void DataProcessor::FFTCalc(QVector<unsigned short> qdata)
     if (fft_ChEn[1])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fftw_in[i] = decode_samples[(qdata[i]&0x0C)>>2];
+            fftw_in[i] = decode_samples[(data_pack[i]&0x0C)>>2];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
         fftwf_execute(fftw_pl);
@@ -162,7 +167,7 @@ void DataProcessor::FFTCalc(QVector<unsigned short> qdata)
     if (fft_ChEn[2])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fftw_in[i] = decode_samples[(qdata[i]&0x30)>>4];
+            fftw_in[i] = decode_samples[(data_pack[i]&0x30)>>4];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
         fftwf_execute(fftw_pl);
@@ -176,7 +181,7 @@ void DataProcessor::FFTCalc(QVector<unsigned short> qdata)
     if (fft_ChEn[3])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fftw_in[i] = decode_samples[(qdata[i]&0xC0)>>6];
+            fftw_in[i] = decode_samples[(data_pack[i]&0xC0)>>6];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
         fftwf_execute(fftw_pl);
@@ -189,14 +194,23 @@ void DataProcessor::FFTCalc(QVector<unsigned short> qdata)
 
 void DataProcessor::ProcessData(QVector<unsigned short> qdata)
 {
+    foreach(unsigned short data, qdata)
+        data_pack[sample_count++] = data;
+
+    if (sample_count < MAX_SAMPLES)
+        return;
+
+
     if (enFillCalc)
-        FillCalc(qdata);
+        FillCalc();
 
     if (enFileDump)
-        FileDump(qdata);
+        FileDump();
 
     if (enFFT)
-        FFTCalc(qdata);
+        FFTCalc();
+
+    sample_count = 0;
 }
 
 void DataProcessor::enableFillCalc(bool Enable)
