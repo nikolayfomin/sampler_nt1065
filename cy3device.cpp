@@ -2,17 +2,17 @@
 
 const char* cy3device_get_error_string(cy3device_err_t error) {
     switch ( error ) {
-        case FX3_ERR_OK:                        return "FX3_ERR_OK";
-        case FX3_ERR_DRV_NOT_IMPLEMENTED:       return "FX3_ERR_DRV_NOT_IMPLEMENTED";
-        case FX3_ERR_USB_INIT_FAIL:             return "FX3_ERR_USB_INIT_FAIL";
-        case FX3_ERR_NO_DEVICE_FOUND:           return "FX3_ERR_NO_DEVICE_FOUND";
-        case FX3_ERR_BAD_DEVICE:                return "FX3_ERR_BAD_DEVICE";
-        case FX3_ERR_FIRMWARE_FILE_IO_ERROR:    return "FX3_ERR_FIRMWARE_FILE_IO_ERROR";
-        case FX3_ERR_FIRMWARE_FILE_CORRUPTED:   return "FX3_ERR_FIRMWARE_FILE_CORRUPTED";
-        case FX3_ERR_ADDFIRMWARE_FILE_IO_ERROR: return "FX3_ERR_ADDFIRMWARE_FILE_IO_ERROR";
-        case FX3_ERR_REG_WRITE_FAIL:            return "FX3_ERR_REG_WRITE_FAIL";
-        case FX3_ERR_FW_TOO_MANY_ERRORS:        return "FX3_ERR_FW_TOO_MANY_ERRORS";
-        case FX3_ERR_CTRL_TX_FAIL:              return "FX3_ERR_CTRL_TX_FAIL";
+        case CY3DEV_OK:                        return "FX3_ERR_OK";
+        case CY3DEV_ERR_DRV_NOT_IMPLEMENTED:       return "FX3_ERR_DRV_NOT_IMPLEMENTED";
+        case CY3DEV_ERR_USB_INIT_FAIL:             return "FX3_ERR_USB_INIT_FAIL";
+        case CY3DEV_ERR_NO_DEVICE_FOUND:           return "FX3_ERR_NO_DEVICE_FOUND";
+        case CY3DEV_ERR_BAD_DEVICE:                return "FX3_ERR_BAD_DEVICE";
+        case CY3DEV_ERR_FIRMWARE_FILE_IO_ERROR:    return "FX3_ERR_FIRMWARE_FILE_IO_ERROR";
+        case CY3DEV_ERR_FIRMWARE_FILE_CORRUPTED:   return "FX3_ERR_FIRMWARE_FILE_CORRUPTED";
+        case CY3DEV_ERR_ADDFIRMWARE_FILE_IO_ERROR: return "FX3_ERR_ADDFIRMWARE_FILE_IO_ERROR";
+        case CY3DEV_ERR_REG_WRITE_FAIL:            return "FX3_ERR_REG_WRITE_FAIL";
+        case CY3DEV_ERR_FW_TOO_MANY_ERRORS:        return "FX3_ERR_FW_TOO_MANY_ERRORS";
+        case CY3DEV_ERR_CTRL_TX_FAIL:              return "FX3_ERR_CTRL_TX_FAIL";
         default:                                return "FX3_ERR_UNKNOWN_ERROR";
     }
 
@@ -43,7 +43,7 @@ cy3device_err_t cy3device::OpenDevice()
     int boot = 0;
     int stream = 0;
     cy3device_err_t res = scan( boot, stream );
-    if ( res != FX3_ERR_OK )
+    if ( res != CY3DEV_OK )
         return res;
 
     bool need_fw_load = stream == 0 && boot > 0;
@@ -55,7 +55,7 @@ cy3device_err_t cy3device::OpenDevice()
         QFileInfo checkFile(FWName);
 
         if (!(checkFile.exists() && checkFile.isFile()))
-            return FX3_ERR_FIRMWARE_FILE_IO_ERROR;
+            return CY3DEV_ERR_FIRMWARE_FILE_IO_ERROR;
 
         if ( Params.USBDevice->IsBootLoaderRunning() )
         {
@@ -69,9 +69,9 @@ cy3device_err_t cy3device::OpenDevice()
                     case CORRUPT_FIRMWARE_IMAGE_FILE:
                     case INCORRECT_IMAGE_LENGTH:
                     case INVALID_FWSIGNATURE:
-                        return FX3_ERR_FIRMWARE_FILE_CORRUPTED;
+                        return CY3DEV_ERR_FIRMWARE_FILE_CORRUPTED;
                     default:
-                        return FX3_ERR_CTRL_TX_FAIL;
+                        return CY3DEV_ERR_CTRL_TX_FAIL;
                 }
             } else
                 qDebug("cy3device::OpenDevice() boot ok!\n" );
@@ -79,7 +79,7 @@ cy3device_err_t cy3device::OpenDevice()
         } else
         {
             qDebug("__error__ cy3device::OpenDevice() StartParams.USBDevice->IsBootLoaderRunning() is FALSE\n" );
-            return FX3_ERR_BAD_DEVICE;
+            return CY3DEV_ERR_BAD_DEVICE;
         }
     }
 
@@ -101,14 +101,18 @@ cy3device_err_t cy3device::OpenDevice()
         delete Params.USBDevice;
         Params.USBDevice = new CCyFX3Device();
         res = scan( boot, stream );
-        if ( res != FX3_ERR_OK )
+        if ( res != CY3DEV_OK )
             return res;
 
     }
 
     res = prepareEndPoints();
-    if ( res != FX3_ERR_OK )
+    if ( res != CY3DEV_OK )
         return res;
+
+    emit DebugMessage(Params.bSuperSpeedDevice ? QString("SuperSpeed USB") :
+                      Params.bHighSpeedDevice ? QString("HighSpeed USB") :
+                                                QString("FullSpeed USB"));
 
     bool In;
     int Attr, MaxPktSize, MaxBurst, Interface, Address;
@@ -118,6 +122,7 @@ cy3device_err_t cy3device::OpenDevice()
         getEndPointParamsByInd(i, &Attr, &In, &MaxPktSize, &MaxBurst, &Interface, &Address);
         qDebug("cy3device::OpenDevice() EndPoint[%d], Attr=%d, In=%d, MaxPktSize=%d, MaxBurst=%d, Infce=%d, Addr=%d\n",
                  i, Attr, In, MaxPktSize, MaxBurst, Interface, Address);
+        emit DebugMessage(QString("Endpoint %1, MaxPacketSize %2, MaxBurst %3").arg(i).arg(MaxPktSize).arg(MaxBurst));
     }
 
     return res;
@@ -139,7 +144,7 @@ cy3device_err_t cy3device::WriteSPI(unsigned char Address, unsigned char Data)
     if (Params.USBDevice == NULL || !Params.USBDevice->IsOpen())
     {
         qDebug("cy3device::WriteSPI device error");
-        return FX3_ERR_BAD_DEVICE;
+        return CY3DEV_ERR_BAD_DEVICE;
     }
 
     UCHAR buf[16];
@@ -158,12 +163,12 @@ cy3device_err_t cy3device::WriteSPI(unsigned char Address, unsigned char Data)
     if (CtrlEndPt->XferData(&buf[0], len))
     {
         qDebug("cy3device::WriteSPI ok, Address %hhu, Data 0x%02X", Address, Data);
-        return FX3_ERR_OK;
+        return CY3DEV_OK;
     }
     else
     {
         qDebug("cy3device::WriteSPI fail");
-        return FX3_ERR_CTRL_TX_FAIL;
+        return CY3DEV_ERR_CTRL_TX_FAIL;
     }
 }
 
@@ -172,7 +177,7 @@ cy3device_err_t cy3device::ReadSPI(unsigned char Address, unsigned char* Data)
     if (Params.USBDevice == NULL || !Params.USBDevice->IsOpen())
     {
         qDebug("cy3device::ReadSPI device error");
-        return FX3_ERR_BAD_DEVICE;
+        return CY3DEV_ERR_BAD_DEVICE;
     }
 
     UCHAR buf[16];
@@ -193,12 +198,12 @@ cy3device_err_t cy3device::ReadSPI(unsigned char Address, unsigned char* Data)
     {
         *Data = buf[0];
         qDebug("cy3device::ReadSPI ok, Address %hhu, Data 0x%02X", Address, Data[0]);
-        return FX3_ERR_OK;
+        return CY3DEV_OK;
     }
     else
     {
         qDebug("cy3device::ReadSPI fail");
-        return FX3_ERR_CTRL_TX_FAIL;
+        return CY3DEV_ERR_CTRL_TX_FAIL;
     }
 }
 
@@ -219,7 +224,7 @@ cy3device_err_t cy3device::scan(int &loadable_count, int &streamable_count)
     if (Params.USBDevice == NULL)
     {
         qDebug("cy3device::scan() USBDevice == NULL" );
-        return FX3_ERR_USB_INIT_FAIL;
+        return CY3DEV_ERR_USB_INIT_FAIL;
     }
 
     unsigned short product = Params.USBDevice->ProductID;
@@ -238,9 +243,9 @@ cy3device_err_t cy3device::scan(int &loadable_count, int &streamable_count)
     qDebug("\n" );
 
     if (loadable_count + streamable_count == 0)
-        return FX3_ERR_BAD_DEVICE;
+        return CY3DEV_ERR_BAD_DEVICE;
     else
-        return FX3_ERR_OK;
+        return CY3DEV_OK;
 
 }
 
@@ -249,7 +254,7 @@ cy3device_err_t cy3device::prepareEndPoints()
     if ( ( Params.USBDevice->VendorID != VENDOR_ID) ||
          ( Params.USBDevice->ProductID != PRODUCT_STREAM ) )
     {
-        return FX3_ERR_BAD_DEVICE;
+        return CY3DEV_ERR_BAD_DEVICE;
     }
 
     int interfaces = Params.USBDevice->AltIntfcCount()+1;
@@ -285,7 +290,7 @@ cy3device_err_t cy3device::prepareEndPoints()
         }
     }
 
-    return FX3_ERR_OK;
+    return CY3DEV_OK;
 }
 
 void cy3device::getEndPointParamsByInd(unsigned int EndPointInd, int *Attr, bool *In, int *MaxPktSize, int *MaxBurst, int *Interface, int *Address)
@@ -306,13 +311,13 @@ cy3device_err_t cy3device::startTransfer(unsigned int EndPointInd, int PPX, int 
     if (Params.USBDevice == NULL || !Params.USBDevice->IsOpen())
     {
         qDebug("cy3device::startTransfer device error");
-        return FX3_ERR_BAD_DEVICE;
+        return CY3DEV_ERR_BAD_DEVICE;
     }
 
     if(EndPointInd >= Endpoints.size())
     {
         qDebug("cy3device::startTransfer no endpoints");
-        return FX3_ERR_BAD_DEVICE;
+        return CY3DEV_ERR_BAD_DEVICE;
     }
 
     Params.CurEndPoint = Endpoints[EndPointInd];
@@ -327,7 +332,7 @@ cy3device_err_t cy3device::startTransfer(unsigned int EndPointInd, int PPX, int 
     {
         Params.USBDevice->SetAltIntfc(clrAlt); // Cleans-up
         qDebug("cy3device::startTransfer interface error");
-        return FX3_ERR_BAD_DEVICE;
+        return CY3DEV_ERR_BAD_DEVICE;
     }
 
     Params.EndPt = Params.USBDevice->EndPointOf((UCHAR)eptAddr);
@@ -335,7 +340,7 @@ cy3device_err_t cy3device::startTransfer(unsigned int EndPointInd, int PPX, int 
     if(Params.EndPt->MaxPktSize==0)
     {
         qDebug("cy3device::startTransfer endpoint transfer size zero");
-        return FX3_ERR_BAD_DEVICE;
+        return CY3DEV_ERR_BAD_DEVICE;
     }
 
     // Limit total transfer length to 4MByte
@@ -386,7 +391,7 @@ cy3device_err_t cy3device::startTransfer(unsigned int EndPointInd, int PPX, int 
         {
             abortTransfer(i+1, buffers,isoPktInfos,contexts,inOvLap);
             qDebug("cy3device::startTransfer BeginDataXfer failed");
-            return FX3_ERR_BULK_IO_ERROR;
+            return CY3DEV_ERR_BULK_IO_ERROR;
         }
     }
 
@@ -394,11 +399,13 @@ cy3device_err_t cy3device::startTransfer(unsigned int EndPointInd, int PPX, int 
 
     qDebug("cy3device::startTransfer initiated");
 
+    time.start();
+
     Params.RunStream = true;
     isStreaming = true;
     QMetaObject::invokeMethod( this, "transfer", Qt::QueuedConnection );
 
-    return FX3_ERR_OK;
+    return CY3DEV_OK;
 }
 
 void cy3device::transfer()
@@ -454,7 +461,12 @@ void cy3device::transfer()
                 Failures++;
         }
 
-        BytesXferred = max(BytesXferred, 0);
+        if (time.elapsed() > 1000)
+        {
+            emit ReportBandwidth(BytesXferred/time.elapsed()*1000);
+            BytesXferred = 0;
+            time.restart();
+        }
 
         processData((char*)buffers[CurrQueue], rLen);
 

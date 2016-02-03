@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include "cy3device.h"
 #include "dataprocessor.h"
+#include "spectrumform.h"
 #include <QFileDialog>
 
 namespace Ui {
@@ -20,9 +21,12 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+    SpectrumForm *spectrumform;
+
 private slots:
     void on_buttonOpenDevice_clicked();
     void DebugParser(QString Message);
+    void DisplayBandwidth(int BW);
 
     void handleAbortDump();
 
@@ -37,6 +41,10 @@ private slots:
     void on_buttonFileDump_clicked();
 
     void on_buttonSetFileName_clicked();
+
+    void on_buttonShowSpectrum_clicked();
+
+    void FFTCalcSetup();
 
 private:
     Ui::MainWindow *ui;

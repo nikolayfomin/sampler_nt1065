@@ -6,12 +6,13 @@
 
 QT       += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
 TARGET = Sampler_NT1065
 TEMPLATE = app
 
-LIBS += ..\source\library\lib\x86\CyAPI.lib
+LIBS += $$PWD\cyapi\lib\x86\CyAPI.lib
+LIBS += $$PWD\fftw\lib\libfftw3f-3.lib
 LIBS += /NODEFAULTLIB:LIBCMT
 LIBS += "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\User32.lib"
 LIBS += "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\setupapi.lib"
@@ -19,13 +20,18 @@ LIBS += "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\setupapi.lib"
 SOURCES += main.cpp\
         mainwindow.cpp \
     cy3device.cpp \
-    dataprocessor.cpp
+    dataprocessor.cpp \
+    qcustomplot/qcustomplot.cpp \
+    spectrumform.cpp
 
 HEADERS  += mainwindow.h \
     cy3device.h \
-    dataprocessor.h
+    dataprocessor.h \
+    qcustomplot/qcustomplot.h \
+    spectrumform.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    spectrumform.ui
 
 win32-msvc2013 {
     HEADERS += vld/vld.h

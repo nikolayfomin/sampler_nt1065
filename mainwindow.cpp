@@ -10,6 +10,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     filedumping = false;
 
+    spectrumform = new SpectrumForm();
+
     Proc = new DataProcessor();
     ProcThread = new QThread;
 
@@ -21,14 +23,38 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->checkFillCalc, SIGNAL(clicked(bool)),
             Proc, SLOT(enableFillCalc(bool)));
 
+    connect(ui->checkFFTCalc, SIGNAL(clicked(bool)),
+            this, SLOT(FFTCalcSetup()));
+    connect(ui->checkChannel1, SIGNAL(clicked(bool)),
+            this, SLOT(FFTCalcSetup()));
+    connect(ui->checkChannel2, SIGNAL(clicked(bool)),
+            this, SLOT(FFTCalcSetup()));
+    connect(ui->checkChannel3, SIGNAL(clicked(bool)),
+            this, SLOT(FFTCalcSetup()));
+    connect(ui->checkChannel4, SIGNAL(clicked(bool)),
+            this, SLOT(FFTCalcSetup()));
+    connect(ui->spinAverageFactor,SIGNAL(valueChanged(int)),
+            this, SLOT(FFTCalcSetup()));
+    connect(ui->spinFrameSkip,SIGNAL(valueChanged(int)),
+            this, SLOT(FFTCalcSetup()));
+
     connect(Proc, SIGNAL(AbortDump()),
             this, SLOT(handleAbortDump()));
 
     connect(Device, SIGNAL(RawData(QVector<unsigned short>)),
             Proc, SLOT(ProcessData(QVector<unsigned short>)));
 
+    connect(Device, SIGNAL(DebugMessage(QString)),
+            this, SLOT(DebugParser(QString)));
+
+    connect(Device, SIGNAL(ReportBandwidth(int)),
+            this, SLOT(DisplayBandwidth(int)));
+
     connect(Proc, SIGNAL(ProcessorMessage(QString)),
             this, SLOT(DebugParser(QString)));
+
+    connect(Proc, SIGNAL(FFTData(QVector<double>*,int)),
+            spectrumform, SLOT(ProcessData(QVector<double>*,int)));
 
     Device->moveToThread(DeviceThread);
 
@@ -67,12 +93,19 @@ MainWindow::~MainWindow()
 
     delete Proc;
     delete ProcThread;
+
+    delete spectrumform;
 }
 
 void MainWindow::DebugParser(QString Message)
 {
     ui->listDebug->addItem(Message);
     ui->listDebug->scrollToBottom();
+}
+
+void MainWindow::DisplayBandwidth(int BW)
+{
+    ui->labelBW->setText(QString("Bandwidth: %1 MSps").arg(BW/1000000.0));
 }
 
 void MainWindow::handleAbortDump()
@@ -91,9 +124,10 @@ void MainWindow::on_buttonOpenDevice_clicked()
                               Qt::BlockingQueuedConnection ,
                               Q_RETURN_ARG( cy3device_err_t , retval));
 
+    DebugParser(QString(""));
     DebugParser(QString("OpenDevice returned %1").arg(cy3device_get_error_string(retval)));
 
-    if (retval == FX3_ERR_OK)
+    if (retval == CY3DEV_OK)
     {
         ui->buttonOpenDevice->setEnabled(false);
         ui->buttonCloseDevice->setEnabled(true);
@@ -137,7 +171,7 @@ void MainWindow::on_buttonReadID_clicked()
                               Q_RETURN_ARG( cy3device_err_t , retval),
                               Q_ARG(unsigned char, 0x00),
                               Q_ARG(unsigned char*, &data[0]));
-    if (retval != FX3_ERR_OK)
+    if (retval != CY3DEV_OK)
     {
         DebugParser(QString("ReadSPI returned %1").arg(cy3device_get_error_string(retval)));
         return;
@@ -149,7 +183,7 @@ void MainWindow::on_buttonReadID_clicked()
                               Q_RETURN_ARG( cy3device_err_t , retval),
                               Q_ARG(unsigned char, 0x01),
                               Q_ARG(unsigned char*, &data[1]));
-    if (retval != FX3_ERR_OK)
+    if (retval != CY3DEV_OK)
     {
         DebugParser(QString("ReadSPI returned %1").arg(cy3device_get_error_string(retval)));
         return;
@@ -227,4 +261,32 @@ void MainWindow::on_buttonSetFileName_clicked()
     if ( fileName.size() > 1 ) {
         ui->editDumpFileName->setText( fileName );
     }
+}
+
+void MainWindow::on_buttonShowSpectrum_clicked()
+{
+    spectrumform->setVisible(true);
+}
+
+void MainWindow::FFTCalcSetup()
+{
+    //void enableFFTCalc(bool Enable, int SkipFrames, bool Ch1, bool Ch2, bool Ch3, bool Ch4);
+    QMetaObject::invokeMethod(Proc ,
+                              "enableFFTCalc" ,
+                              Qt::BlockingQueuedConnection,
+                              Q_ARG(bool, ui->checkFFTCalc->isChecked()),
+                              Q_ARG(int, ui->spinFrameSkip->value()),
+                              Q_ARG(bool, ui->checkChannel1->isChecked()),
+                              Q_ARG(bool, ui->checkChannel2->isChecked()),
+                              Q_ARG(bool, ui->checkChannel3->isChecked()),
+                              Q_ARG(bool, ui->checkChannel4->isChecked())
+                              );
+
+    spectrumform->AverageFactor = ui->spinAverageFactor->value();
+
+    spectrumform->SetupChannels(ui->checkChannel1->isChecked(),
+                                ui->checkChannel2->isChecked(),
+                                ui->checkChannel3->isChecked(),
+                                ui->checkChannel4->isChecked()
+                                );
 }
