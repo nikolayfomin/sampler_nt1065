@@ -105,7 +105,7 @@ void MainWindow::DebugParser(QString Message)
 
 void MainWindow::DisplayBandwidth(int BW)
 {
-    ui->labelBW->setText(QString("Bandwidth: %1 MSps").arg(BW/1000000.0));
+    ui->labelBW->setText(QString("Bandwidth: %1 MSps").arg(BW/2.0/1000000.0)); // div by 2 cause samples are 16bit
 }
 
 void MainWindow::handleAbortDump()

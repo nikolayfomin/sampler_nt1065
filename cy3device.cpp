@@ -2,18 +2,18 @@
 
 const char* cy3device_get_error_string(cy3device_err_t error) {
     switch ( error ) {
-        case CY3DEV_OK:                        return "FX3_ERR_OK";
-        case CY3DEV_ERR_DRV_NOT_IMPLEMENTED:       return "FX3_ERR_DRV_NOT_IMPLEMENTED";
-        case CY3DEV_ERR_USB_INIT_FAIL:             return "FX3_ERR_USB_INIT_FAIL";
-        case CY3DEV_ERR_NO_DEVICE_FOUND:           return "FX3_ERR_NO_DEVICE_FOUND";
-        case CY3DEV_ERR_BAD_DEVICE:                return "FX3_ERR_BAD_DEVICE";
-        case CY3DEV_ERR_FIRMWARE_FILE_IO_ERROR:    return "FX3_ERR_FIRMWARE_FILE_IO_ERROR";
-        case CY3DEV_ERR_FIRMWARE_FILE_CORRUPTED:   return "FX3_ERR_FIRMWARE_FILE_CORRUPTED";
-        case CY3DEV_ERR_ADDFIRMWARE_FILE_IO_ERROR: return "FX3_ERR_ADDFIRMWARE_FILE_IO_ERROR";
-        case CY3DEV_ERR_REG_WRITE_FAIL:            return "FX3_ERR_REG_WRITE_FAIL";
-        case CY3DEV_ERR_FW_TOO_MANY_ERRORS:        return "FX3_ERR_FW_TOO_MANY_ERRORS";
-        case CY3DEV_ERR_CTRL_TX_FAIL:              return "FX3_ERR_CTRL_TX_FAIL";
-        default:                                return "FX3_ERR_UNKNOWN_ERROR";
+        case CY3DEV_OK:                             return "CY3DEV_OK";
+        case CY3DEV_ERR_DRV_NOT_IMPLEMENTED:        return "CY3DEV_ERR_DRV_NOT_IMPLEMENTED";
+        case CY3DEV_ERR_USB_INIT_FAIL:              return "CY3DEV_ERR_USB_INIT_FAIL";
+        case CY3DEV_ERR_NO_DEVICE_FOUND:            return "CY3DEV_ERR_NO_DEVICE_FOUND";
+        case CY3DEV_ERR_BAD_DEVICE:                 return "CY3DEV_ERR_BAD_DEVICE";
+        case CY3DEV_ERR_FIRMWARE_FILE_IO_ERROR:     return "CY3DEV_ERR_FIRMWARE_FILE_IO_ERROR";
+        case CY3DEV_ERR_FIRMWARE_FILE_CORRUPTED:    return "CY3DEV_ERR_FIRMWARE_FILE_CORRUPTED";
+        case CY3DEV_ERR_ADDFIRMWARE_FILE_IO_ERROR:  return "CY3DEV_ERR_ADDFIRMWARE_FILE_IO_ERROR";
+        case CY3DEV_ERR_REG_WRITE_FAIL:             return "CY3DEV_ERR_REG_WRITE_FAIL";
+        case CY3DEV_ERR_FW_TOO_MANY_ERRORS:         return "CY3DEV_ERR_FW_TOO_MANY_ERRORS";
+        case CY3DEV_ERR_CTRL_TX_FAIL:               return "CY3DEV_ERR_CTRL_TX_FAIL";
+        default:                                    return "CY3DEV_ERR_UNKNOWN_ERROR";
     }
 
 }
