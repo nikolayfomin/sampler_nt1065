@@ -41,4 +41,21 @@ win32-msvc2013 {
     DEPENDPATH += $$PWD/vld
 
     PRE_TARGETDEPS += $$PWD/vld/vld.lib
+
+    INCLUDEPATH += "%ProgramFiles(x86)%/Microsoft SDKs/Windows/7.1A/Include"
+    QMAKE_CXX += /D_USING_V110_SDK71_
+
+    # 32bit toolchain
+    QMAKE_LFLAGS += /SUBSYSTEM:CONSOLE,5.01
+    LIBS += -L"%ProgramFiles(x86)%/Microsoft SDKs/Windows/7.1A/Lib"
+}
+
+win32-msvc2010 {
+    HEADERS += vld/vld.h
+
+    LIBS += -L$$PWD/vld/ -vld
+    INCLUDEPATH += $$PWD/vld
+    DEPENDPATH += $$PWD/vld
+
+    PRE_TARGETDEPS += $$PWD/vld/vld.lib
 }

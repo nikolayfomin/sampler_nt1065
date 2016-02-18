@@ -15,7 +15,6 @@ class DataProcessor : public QObject
 
 private:
     // dataframe size
-    const int MAX_SAMPLES = 2*1024*1024;
     int sample_count;
 
     QVector<unsigned short> data_pack;
@@ -40,8 +39,6 @@ private:
     void FileDump();
 
     // fft calculation variables
-    const int FFT_SAMPLES_PER_FRAME = 65536;
-    const int FFT_SKIP_FRAMES = 5;
     float* fftw_in;
     fftwf_complex* fftw_out;
     fftwf_plan fftw_pl;

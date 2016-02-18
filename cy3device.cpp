@@ -21,6 +21,9 @@ const char* cy3device_get_error_string(cy3device_err_t error)
 
 cy3device::cy3device(const char* firmwareFileName, QObject *parent) : QObject(parent)
 {
+    Params.USBDevice == NULL;
+    Params.EndPt = NULL;
+
     FWName = firmwareFileName;
 
     BytesXferred = 0;

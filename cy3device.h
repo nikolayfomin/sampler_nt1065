@@ -43,8 +43,8 @@ struct EndPointParams{
 };
 
 struct DeviceParams{
-    CCyFX3Device	*USBDevice = NULL;
-    CCyUSBEndPoint  *EndPt = NULL;
+    CCyFX3Device	*USBDevice;
+    CCyUSBEndPoint  *EndPt;
     int				PPX;
     long            TransferSize;
     int				QueueSize;

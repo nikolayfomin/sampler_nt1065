@@ -1,6 +1,8 @@
 #include "spectrumform.h"
 #include "ui_spectrumform.h"
 
+const int PLOT_RESOLUTION = 32768; // FFT_SAMPLES/2
+
 SpectrumForm::SpectrumForm(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::SpectrumForm)

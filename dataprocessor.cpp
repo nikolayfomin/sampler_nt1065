@@ -1,5 +1,10 @@
 #include "dataprocessor.h"
 
+const int MAX_SAMPLES = 2*1024*1024;
+
+const int FFT_SAMPLES_PER_FRAME = 65536;
+const int FFT_SKIP_FRAMES = 5;
+
 int decode_samples[4] = {1, 3, -1, -3};
 
 DataProcessor::DataProcessor(QObject *parent) : QObject(parent)
