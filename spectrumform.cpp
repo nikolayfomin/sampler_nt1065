@@ -11,6 +11,10 @@ SpectrumForm::SpectrumForm(QWidget *parent) :
 
     AverageFactor = 10;
 
+    // transpose samples to freq. value
+    // default sampling rate is 53MHz, fs/2 = 26.5MHz
+    double res_to_freq = PLOT_RESOLUTION/26.5;
+
     plot->addGraph();
     plot->graph(0)->setPen(QPen(Qt::blue));
     plot->addGraph();
@@ -20,9 +24,14 @@ SpectrumForm::SpectrumForm(QWidget *parent) :
     plot->addGraph();
     plot->graph(3)->setPen(QPen(Qt::green));
 
+    plot->setInteraction(QCP::iRangeDrag, true);
+    plot->axisRect()->setRangeDrag(Qt::Horizontal);
+    plot->setInteraction(QCP::iRangeZoom, true);
+    plot->axisRect()->setRangeZoom(Qt::Horizontal);
+
     x_axis = new QVector<double>(PLOT_RESOLUTION);
     for (int i = 0; i < PLOT_RESOLUTION; i++)
-        (*x_axis)[i] = (double)i/100.0; // in MHz
+        (*x_axis)[i] = (double)i/res_to_freq; // in MHz
 
     y_axis[0] = new QVector<double>(PLOT_RESOLUTION);
     y_axis[0]->fill(0.0);
@@ -33,7 +42,7 @@ SpectrumForm::SpectrumForm(QWidget *parent) :
     y_axis[3] = new QVector<double>(PLOT_RESOLUTION);
     y_axis[3]->fill(0.0);
 
-    plot->xAxis->setRange(0, PLOT_RESOLUTION/100.0); // in MHz
+    plot->xAxis->setRange(0, PLOT_RESOLUTION/res_to_freq); // in MHz
     plot->yAxis->setRange(0, 100);
 
     plot->xAxis->setLabel("Frequency, MHz");

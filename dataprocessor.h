@@ -14,25 +14,34 @@ class DataProcessor : public QObject
     Q_OBJECT
 
 private:
+    // dataframe size
     const int MAX_SAMPLES = 2*1024*1024;
     int sample_count;
 
     QVector<unsigned short> data_pack;
 
-    const int FFT_SAMPLES_PER_FRAME = 5300;
-    const int FFT_SKIP_FRAMES = 5;
-
+    // filling calculation variables
     int fill_sample_count;
     int cnt_ch1[4];
     int cnt_ch2[4];
     int cnt_ch3[4];
     int cnt_ch4[4];
 
+    bool enFillCalc;
+    void FillCalc();
+
+    // file dump variables
     QFile *dumpfile;
     QString dumpfilename;
     long dump_limit;
     long dump_count;
 
+    bool enFileDump;
+    void FileDump();
+
+    // fft calculation variables
+    const int FFT_SAMPLES_PER_FRAME = 65536;
+    const int FFT_SKIP_FRAMES = 5;
     float* fftw_in;
     fftwf_complex* fftw_out;
     fftwf_plan fftw_pl;
@@ -40,12 +49,7 @@ private:
     int fft_skipframes;
     bool fft_ChEn[4];
     int fftw_cnt;
-
-    bool enFillCalc;
-    void FillCalc();
-
-    bool enFileDump;
-    void FileDump();
+    QVector<double> fft_window;
 
     bool enFFT;
     void FFTCalc();

@@ -91,12 +91,6 @@ private:
 public:
     explicit cy3device(const char* firmwareFileName, QObject *parent = 0);
 
-    /*int ReviewDevices();
-    int LoadRAM(const char* fwFileName);
-    int GetStreamerDevice();
-    int Read16bitSPI(unsigned char addr, unsigned char* data);
-    int Send16bitSPI(unsigned char addr, unsigned char data);*/
-
     bool isStreaming;
 
 signals:

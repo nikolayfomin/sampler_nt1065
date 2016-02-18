@@ -32,6 +32,11 @@ DataProcessor::DataProcessor(QObject *parent) : QObject(parent)
     fft_samples[3]->resize(FFT_SAMPLES_PER_FRAME/2);
     fft_ChEn[0] = fft_ChEn[1] = fft_ChEn[2] = fft_ChEn[3] = false;
 
+    fft_window.resize(FFT_SAMPLES_PER_FRAME/2);
+
+    for (int i = 0; i < FFT_SAMPLES_PER_FRAME/2; i++)
+        fft_window[i] = 0.5 - 0.5*cos(2*M_PI*i/(FFT_SAMPLES_PER_FRAME/2 - 1));
+
     enFillCalc = 0;
     enFileDump = 0;
     enFFT = 0;
@@ -139,7 +144,7 @@ void DataProcessor::FFTCalc()
     if (fft_ChEn[0])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fftw_in[i] = decode_samples[(data_pack[i]&0x03)>>0];
+            fftw_in[i] = decode_samples[(data_pack[i]&0x03)>>0] * fft_window[i];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
         fftwf_execute(fftw_pl);
@@ -153,7 +158,7 @@ void DataProcessor::FFTCalc()
     if (fft_ChEn[1])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fftw_in[i] = decode_samples[(data_pack[i]&0x0C)>>2];
+            fftw_in[i] = decode_samples[(data_pack[i]&0x0C)>>2] * fft_window[i];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
         fftwf_execute(fftw_pl);
@@ -167,7 +172,7 @@ void DataProcessor::FFTCalc()
     if (fft_ChEn[2])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fftw_in[i] = decode_samples[(data_pack[i]&0x30)>>4];
+            fftw_in[i] = decode_samples[(data_pack[i]&0x30)>>4] * fft_window[i];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
         fftwf_execute(fftw_pl);
@@ -181,7 +186,7 @@ void DataProcessor::FFTCalc()
     if (fft_ChEn[3])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fftw_in[i] = decode_samples[(data_pack[i]&0xC0)>>6];
+            fftw_in[i] = decode_samples[(data_pack[i]&0xC0)>>6] * fft_window[i];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
         fftwf_execute(fftw_pl);

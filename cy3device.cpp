@@ -1,7 +1,9 @@
 #include "cy3device.h"
 
-const char* cy3device_get_error_string(cy3device_err_t error) {
-    switch ( error ) {
+const char* cy3device_get_error_string(cy3device_err_t error)
+{
+    switch ( error )
+    {
         case CY3DEV_OK:                             return "CY3DEV_OK";
         case CY3DEV_ERR_DRV_NOT_IMPLEMENTED:        return "CY3DEV_ERR_DRV_NOT_IMPLEMENTED";
         case CY3DEV_ERR_USB_INIT_FAIL:              return "CY3DEV_ERR_USB_INIT_FAIL";
@@ -15,7 +17,6 @@ const char* cy3device_get_error_string(cy3device_err_t error) {
         case CY3DEV_ERR_CTRL_TX_FAIL:               return "CY3DEV_ERR_CTRL_TX_FAIL";
         default:                                    return "CY3DEV_ERR_UNKNOWN_ERROR";
     }
-
 }
 
 cy3device::cy3device(const char* firmwareFileName, QObject *parent) : QObject(parent)
@@ -81,10 +82,8 @@ cy3device_err_t cy3device::OpenDevice()
             qDebug("__error__ cy3device::OpenDevice() StartParams.USBDevice->IsBootLoaderRunning() is FALSE\n" );
             return CY3DEV_ERR_BAD_DEVICE;
         }
-    }
 
-    if ( need_fw_load )
-    {
+    // reconnect device if firmware is flashed (new Product ID)
         int PAUSE_AFTER_FLASH_SECONDS = 2;
         qDebug("cy3device::OpenDevice() flash completed!\nPlease wait for %d seconds\n", PAUSE_AFTER_FLASH_SECONDS );
         for ( int i = 0; i < PAUSE_AFTER_FLASH_SECONDS * 2; i++ )
@@ -481,8 +480,10 @@ void cy3device::transfer()
 
         CurrQueue = (CurrQueue + 1) % Params.QueueSize;
 
+        // method loop if no transfer error or external abort request
+        // invoke itself through thread queue to allow executing other queued processes
         QMetaObject::invokeMethod( this, "transfer", Qt::QueuedConnection );
-    }  // End of the transfer loop
+    }
 }
 
 void cy3device::abortTransfer(int pending, PUCHAR *buffers, CCyIsoPktInfo **isoPktInfos, PUCHAR *contexts, OVERLAPPED *inOvLap)
@@ -525,25 +526,7 @@ void cy3device::stopTransfer()
     Params.RunStream = false;
 }
 
-unsigned int count_size = 0;
-unsigned short mask = 0;
-
-int testDataBits16(unsigned short* data, int size)
-{
-    for ( int scount = 0; scount < size; scount++ )
-        mask |= data[scount];
-    if (count_size >= 64*1024*1024)
-    {
-        qDebug() << "mask: " << hex << mask;
-        count_size = 0;
-        mask = 0;
-    }
-    else
-        count_size += size;
-
-    return mask;
-}
-
+// repack data array into 16bit samples array and send outwards
 void cy3device::processData(char *data, int size)
 {
     unsigned short* sdata = (unsigned short*) data;

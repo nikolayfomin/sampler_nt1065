@@ -25,7 +25,7 @@ private:
     QVector<double> *x_axis;
     QVector<double> *y_axis[4];
 
-    const int PLOT_RESOLUTION = 2650; // FFT_SAMPLES/2
+    const int PLOT_RESOLUTION = 32768; // FFT_SAMPLES/2
 
 public slots:
     void ProcessData(QVector<double> *data, int channel);
