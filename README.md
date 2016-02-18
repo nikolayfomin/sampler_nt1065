@@ -1,31 +1,31 @@
-RUNNING AND USING DMB CYUSB3.0 NT1065.1 DEMO SOFTWARE
+## RUNNING AND USING DMB CYUSB3.0 NT1065.1 DEMO SOFTWARE
 
-
-5.1 Basic configuration options
+### 1. Basic configuration options
 Go to the software folder and run Sampler_NT1065.exe.
 
 The program allows you to perform the following operations:
-Button Open device ñ connect demo-board to demo software. If it is the first launch of demoboard after applying power supply, working firmware will be flashed and the name of demoboard in ìDevice managerî should change from ìCypress USB BootLoaderî to ìCypress USB StreamerExampleî. Log message ìOpenDevise returned CY3DEV_OKî if connection was successful and ìSuperSpeed USBî, if DMB CYUSB3.0 NT1065.1 was connected to USB3.0, or ìHighSpeed USBî, if it was connected to USB2.0. In addition, shows connected endpoint parameters.
-Button Close device ñ disconnect demo-board from demo software.
-Button Read ID ñ log message of IC ID and revision if connection was
+- **Open device** ‚Äì connect demo-board to demo software. If it is the first launch of demoboard after applying power supply, working firmware will be flashed and the name of demoboard in ‚ÄúDevice manager‚Äù should change from ‚ÄúCypress USB BootLoader‚Äù to ‚ÄúCypress USB StreamerExample‚Äù. Log message ‚ÄúOpenDevise returned CY3DEV_OK‚Äù if connection was successful and ‚ÄúSuperSpeed USB‚Äù, if DMB CYUSB3.0 NT1065.1 was connected to USB3.0, or ‚ÄúHighSpeed USB‚Äù, if it was connected to USB2.0. In addition, shows connected endpoint parameters.
+- **Close device** ‚Äì disconnect demo-board from demo software.
+- **Read ID** ‚Äì log message of IC ID and revision if connection was
 successful and demo-board is ready.
 
 Following options should only be used after writing a correct configuration file to IC NT1065.1:
-Button Start stream ñ starts data stream transmission from NT1065.1 chip to the computer.
-Data sampling speed is displayed below ìRead IDî button.
-Button Stop stream ñ stops data stream transmission from NT1065.1 chip to the computer.
+- **Start stream** ‚Äì starts data stream transmission from NT1065.1 chip to the computer.
+Data sampling speed is displayed below ‚ÄúRead ID‚Äù button.
+- **Stop stream** ‚Äì stops data stream transmission from NT1065.1 chip to the computer.
 
 
-5.2 Data processing options
+### 2. Data processing options
 Following demo options are available in software:
 - Calculating ADC filling
-Tick the appropriate check box ìCalculate ADC fillingî to start measuring. The results are displayed in a log in real time (one measure across 8M samples data chunk).
+
+  Tick the appropriate check box ‚ÄúCalculate ADC filling‚Äù to start measuring. The results are displayed in a log in real time (one measure across 8M samples data chunk).
 
 - Saving data dump to file
-Select the file size and choose a location on your computer where file should be saved. Each sample takes one byte (for 2 bits per 4 channels).
+
+  Select the file size and choose a location on your computer where file should be saved. Each sample takes one byte (for 2 bits per 4 channels).
 
 - ADC signal spectrum display
-Tick the appropriate box ìCalculate spectrumî to start measure then push the button ìShow spectrumî to open new window with spectrum waveform.
-Enable or disable specific channels display with the appropriate check boxes. Set desired frameskip (one frame is 2M samples data chunk, FFT size is 65536 samples per frame) and
-averager values to improve performance at the expense of visual smoothness. Spectrum display is set for 53MHz ADC sampling rate. If another output rate is used displayed
-data may not be valid.
+
+  Tick the appropriate box ‚ÄúCalculate spectrum‚Äù to start measure then push the button ‚ÄúShow spectrum‚Äù to open new window with spectrum waveform.
+  Enable or disable specific channels display with the appropriate check boxes. Set desired frameskip (one frame is 2M samples data chunk, FFT size is 65536 samples per frame) and averager values to improve performance at the expense of visual smoothness. Spectrum display is set for 53MHz ADC sampling rate. If another output rate is used displayed data may not be valid.
