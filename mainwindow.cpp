@@ -25,6 +25,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->checkFFTCalc, SIGNAL(clicked(bool)),
             this, SLOT(FFTCalcSetup()));
+    connect(ui->spinSampleRate, SIGNAL(valueChanged(double)),
+            this, SLOT(FFTCalcSetup()));
     connect(ui->checkChannel1, SIGNAL(clicked(bool)),
             this, SLOT(FFTCalcSetup()));
     connect(ui->checkChannel2, SIGNAL(clicked(bool)),
@@ -62,6 +64,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     Proc->moveToThread(ProcThread);
     ProcThread->start();
+
+    this->setWindowTitle(QString("Sampler NT1065 demo v%1").arg(APP_VERSION));
 }
 
 MainWindow::~MainWindow()
@@ -284,7 +288,8 @@ void MainWindow::FFTCalcSetup()
 
     spectrumform->AverageFactor = ui->spinAverageFactor->value();
 
-    spectrumform->SetupChannels(ui->checkChannel1->isChecked(),
+    spectrumform->SetupChannels(ui->spinSampleRate->value(),
+                                ui->checkChannel1->isChecked(),
                                 ui->checkChannel2->isChecked(),
                                 ui->checkChannel3->isChecked(),
                                 ui->checkChannel4->isChecked()

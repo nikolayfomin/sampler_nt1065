@@ -28,7 +28,7 @@ private:
 public slots:
     void ProcessData(QVector<double> *data, int channel);
 
-    void SetupChannels(bool Ch1, bool Ch2, bool Ch3, bool Ch4);
+    void SetupChannels(double SampleRate, bool Ch1, bool Ch2, bool Ch3, bool Ch4);
 };
 
 #endif // SPECTRUMFORM_H

@@ -2,6 +2,8 @@
 #include "ui_spectrumform.h"
 
 const int PLOT_RESOLUTION = 32768; // FFT_SAMPLES/2
+// default sampling rate is 53MHz, fs/2 = 26.5MHz
+const double INIT_RES_TO_FREQ = 26.5/PLOT_RESOLUTION;
 
 SpectrumForm::SpectrumForm(QWidget *parent) :
     QWidget(parent),
@@ -12,10 +14,6 @@ SpectrumForm::SpectrumForm(QWidget *parent) :
     plot = ui->plotSpectrum;
 
     AverageFactor = 10;
-
-    // transpose samples to freq. value
-    // default sampling rate is 53MHz, fs/2 = 26.5MHz
-    double res_to_freq = PLOT_RESOLUTION/26.5;
 
     plot->addGraph();
     plot->graph(0)->setPen(QPen(Qt::blue));
@@ -33,7 +31,7 @@ SpectrumForm::SpectrumForm(QWidget *parent) :
 
     x_axis = new QVector<double>(PLOT_RESOLUTION);
     for (int i = 0; i < PLOT_RESOLUTION; i++)
-        (*x_axis)[i] = (double)i/res_to_freq; // in MHz
+        (*x_axis)[i] = (double)i*INIT_RES_TO_FREQ; // in MHz
 
     y_axis[0] = new QVector<double>(PLOT_RESOLUTION);
     y_axis[0]->fill(0.0);
@@ -44,7 +42,7 @@ SpectrumForm::SpectrumForm(QWidget *parent) :
     y_axis[3] = new QVector<double>(PLOT_RESOLUTION);
     y_axis[3]->fill(0.0);
 
-    plot->xAxis->setRange(0, PLOT_RESOLUTION/res_to_freq); // in MHz
+    plot->xAxis->setRange(0, PLOT_RESOLUTION*INIT_RES_TO_FREQ); // in MHz
     plot->yAxis->setRange(0, 100);
 
     plot->xAxis->setLabel("Frequency, MHz");
@@ -80,10 +78,17 @@ void SpectrumForm::ProcessData(QVector<double> *data, int channel)
      plot->replot();
 }
 
-void SpectrumForm::SetupChannels(bool Ch1, bool Ch2, bool Ch3, bool Ch4)
+void SpectrumForm::SetupChannels(double SampleRate, bool Ch1, bool Ch2, bool Ch3, bool Ch4)
 {
     plot->graph(0)->setVisible(Ch1);
     plot->graph(1)->setVisible(Ch2);
     plot->graph(2)->setVisible(Ch3);
     plot->graph(3)->setVisible(Ch4);
+
+    for (int i = 0; i < PLOT_RESOLUTION; i++)
+        (*x_axis)[i] = i * (SampleRate/2.0)/PLOT_RESOLUTION; // in MHz
+
+    plot->xAxis->setRange(0, SampleRate/2.0); // in MHz
+
+    plot->replot();
 }

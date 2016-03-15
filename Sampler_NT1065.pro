@@ -11,6 +11,8 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 TARGET = Sampler_NT1065
 TEMPLATE = app
 
+include(app_ver.pri)
+
 LIBS += $$PWD\cyapi\lib\x86\CyAPI.lib
 LIBS += $$PWD\fftw\lib\libfftw3f-3.lib
 LIBS += /NODEFAULTLIB:LIBCMT
