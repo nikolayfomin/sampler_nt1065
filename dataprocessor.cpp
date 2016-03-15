@@ -27,14 +27,10 @@ DataProcessor::DataProcessor(QObject *parent) : QObject(parent)
     fftw_pl = fftwf_plan_dft_r2c_1d(FFT_SAMPLES_PER_FRAME, fftw_in, fftw_out, FFTW_ESTIMATE);
     fftw_cnt = FFT_SKIP_FRAMES;
     fft_skipframes = FFT_SKIP_FRAMES;
-    fft_samples[0] = new QVector<double>;
-    fft_samples[0]->resize(FFT_SAMPLES_PER_FRAME/2);
-    fft_samples[1] = new QVector<double>;
-    fft_samples[1]->resize(FFT_SAMPLES_PER_FRAME/2);
-    fft_samples[2] = new QVector<double>;
-    fft_samples[2]->resize(FFT_SAMPLES_PER_FRAME/2);
-    fft_samples[3] = new QVector<double>;
-    fft_samples[3]->resize(FFT_SAMPLES_PER_FRAME/2);
+    fft_samples[0] = new QVector<double>(FFT_SAMPLES_PER_FRAME/2, 0.0);
+    fft_samples[1] = new QVector<double>(FFT_SAMPLES_PER_FRAME/2, 0.0);
+    fft_samples[2] = new QVector<double>(FFT_SAMPLES_PER_FRAME/2, 0.0);
+    fft_samples[3] = new QVector<double>(FFT_SAMPLES_PER_FRAME/2, 0.0);
     fft_ChEn[0] = fft_ChEn[1] = fft_ChEn[2] = fft_ChEn[3] = false;
 
     fft_window.resize(FFT_SAMPLES_PER_FRAME/2);

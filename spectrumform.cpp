@@ -33,14 +33,10 @@ SpectrumForm::SpectrumForm(QWidget *parent) :
     for (int i = 0; i < PLOT_RESOLUTION; i++)
         (*x_axis)[i] = (double)i*INIT_RES_TO_FREQ; // in MHz
 
-    y_axis[0] = new QVector<double>(PLOT_RESOLUTION);
-    y_axis[0]->fill(0.0);
-    y_axis[1] = new QVector<double>(PLOT_RESOLUTION);
-    y_axis[1]->fill(0.0);
-    y_axis[2] = new QVector<double>(PLOT_RESOLUTION);
-    y_axis[2]->fill(0.0);
-    y_axis[3] = new QVector<double>(PLOT_RESOLUTION);
-    y_axis[3]->fill(0.0);
+    y_axis[0] = new QVector<double>(PLOT_RESOLUTION, 0.0);
+    y_axis[1] = new QVector<double>(PLOT_RESOLUTION, 0.0);
+    y_axis[2] = new QVector<double>(PLOT_RESOLUTION, 0.0);
+    y_axis[3] = new QVector<double>(PLOT_RESOLUTION, 0.0);
 
     plot->xAxis->setRange(0, PLOT_RESOLUTION*INIT_RES_TO_FREQ); // in MHz
     plot->yAxis->setRange(0, 100);
@@ -70,7 +66,7 @@ void SpectrumForm::ProcessData(QVector<double> *data, int channel)
      {
          //(*expAved)[i] -= (*expAved)[i]*expAveC;
          //(*expAved)[i] += (*spc)[i]*expAveC;
-         (*y_axis[channel])[i] += (*data)[i]/AverageFactor - (*y_axis[channel])[i]/AverageFactor;
+         (*y_axis[channel])[i] += ((*data)[i] - (*y_axis[channel])[i])/AverageFactor;
      }
 
      plot->graph(channel)->setData(*x_axis, *y_axis[channel]);
