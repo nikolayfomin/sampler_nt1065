@@ -28,4 +28,4 @@ Following demo options are available in software:
 - ADC signal spectrum display
 
   Tick the appropriate box “Calculate spectrum” to start measure then push the button “Show spectrum” to open new window with spectrum waveform.
-  Enable or disable specific channels display with the appropriate check boxes. Set desired frameskip (one frame is 2M samples data chunk, FFT size is 65536 samples per frame) and averager values to improve performance at the expense of visual smoothness. Spectrum display is set for 53MHz ADC sampling rate. If another output rate is used displayed data may not be valid.
+  Enable or disable specific channels display with the appropriate check boxes. Set desired frameskip (one frame is 2M samples data chunk, FFT size is 65536 samples per frame) and averager values to improve performance at the expense of visual smoothness. Spectrum display is set for 53MHz ADC sampling rate by default. If another output rate is used, display rate should be changed with "Disp. sample rate" option in main window.
