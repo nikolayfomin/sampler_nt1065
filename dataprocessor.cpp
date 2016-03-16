@@ -5,7 +5,7 @@ const int MAX_SAMPLES = 2*1024*1024;
 const int FFT_SAMPLES_PER_FRAME = 65536;
 const int FFT_SKIP_FRAMES = 5;
 
-int decode_samples[4] = {1, 3, -1, -3};
+const double decode_samples[4] = {1.0, 3.0, -1.0, -3.0};
 
 DataProcessor::DataProcessor(QObject *parent) : QObject(parent)
 {
@@ -22,9 +22,9 @@ DataProcessor::DataProcessor(QObject *parent) : QObject(parent)
     dumpfile = NULL;
     dump_limit = 0;
 
-    fftw_in = (float*) fftwf_malloc(sizeof(float) * FFT_SAMPLES_PER_FRAME);
-    fftw_out = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * FFT_SAMPLES_PER_FRAME);
-    fftw_pl = fftwf_plan_dft_r2c_1d(FFT_SAMPLES_PER_FRAME, fftw_in, fftw_out, FFTW_ESTIMATE);
+    fft_in  = new complex[FFT_SAMPLES_PER_FRAME];
+    fft_out = new complex[FFT_SAMPLES_PER_FRAME];
+
     fftw_cnt = FFT_SKIP_FRAMES;
     fft_skipframes = FFT_SKIP_FRAMES;
     fft_samples[0] = new QVector<double>(FFT_SAMPLES_PER_FRAME/2, 0.0);
@@ -33,10 +33,10 @@ DataProcessor::DataProcessor(QObject *parent) : QObject(parent)
     fft_samples[3] = new QVector<double>(FFT_SAMPLES_PER_FRAME/2, 0.0);
     fft_ChEn[0] = fft_ChEn[1] = fft_ChEn[2] = fft_ChEn[3] = false;
 
-    fft_window.resize(FFT_SAMPLES_PER_FRAME/2);
+    fft_window.resize(FFT_SAMPLES_PER_FRAME);
 
-    for (int i = 0; i < FFT_SAMPLES_PER_FRAME/2; i++)
-        fft_window[i] = 0.5 - 0.5*cos(2*M_PI*i/(FFT_SAMPLES_PER_FRAME/2 - 1));
+    for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++)
+        fft_window[i] = 0.5 - 0.5*cos(2*M_PI*i/(FFT_SAMPLES_PER_FRAME - 1));
 
     enFillCalc = 0;
     enFileDump = 0;
@@ -57,9 +57,8 @@ DataProcessor::~DataProcessor()
     delete fft_samples[1];
     delete fft_samples[2];
     delete fft_samples[3];
-    fftwf_free(fftw_in);
-    fftwf_free(fftw_out);
-    fftwf_destroy_plan(fftw_pl);
+    delete fft_in;
+    delete fft_out;
 }
 
 void DataProcessor::FillCalc()
@@ -145,12 +144,12 @@ void DataProcessor::FFTCalc()
     if (fft_ChEn[0])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fftw_in[i] = decode_samples[(data_pack[i]&0x03)>>0] * fft_window[i];
+            fft_in[i] = decode_samples[(data_pack[i]&0x03)>>0] * fft_window[i];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
-        fftwf_execute(fftw_pl);
+        CFFT::Forward(fft_in, fft_out, FFT_SAMPLES_PER_FRAME);
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME/2; i++)
-            (*fft_samples[0])[i] = (double)(10.0*log10(fftw_out[i][0]*fftw_out[i][0]+fftw_out[i][1]*fftw_out[i][1]));
+            (*fft_samples[0])[i] = 10.0*log10(fft_out[i].norm());
 
         emit FFTData(fft_samples[0], 0);
     }
@@ -159,12 +158,12 @@ void DataProcessor::FFTCalc()
     if (fft_ChEn[1])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fftw_in[i] = decode_samples[(data_pack[i]&0x0C)>>2] * fft_window[i];
+            fft_in[i] = decode_samples[(data_pack[i]&0x0C)>>2] * fft_window[i];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
-        fftwf_execute(fftw_pl);
+        CFFT::Forward(fft_in, fft_out, FFT_SAMPLES_PER_FRAME);
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME/2; i++)
-            (*fft_samples[1])[i] = (double)(10.0*log10(fftw_out[i][0]*fftw_out[i][0]+fftw_out[i][1]*fftw_out[i][1]));
+            (*fft_samples[1])[i] = 10.0*log10(fft_out[i].norm());
 
         emit FFTData(fft_samples[1], 1);
     }
@@ -173,12 +172,12 @@ void DataProcessor::FFTCalc()
     if (fft_ChEn[2])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fftw_in[i] = decode_samples[(data_pack[i]&0x30)>>4] * fft_window[i];
+            fft_in[i] = decode_samples[(data_pack[i]&0x30)>>4] * fft_window[i];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
-        fftwf_execute(fftw_pl);
+        CFFT::Forward(fft_in, fft_out, FFT_SAMPLES_PER_FRAME);
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME/2; i++)
-            (*fft_samples[2])[i] = (double)(10.0*log10(fftw_out[i][0]*fftw_out[i][0]+fftw_out[i][1]*fftw_out[i][1]));
+            (*fft_samples[2])[i] = 10.0*log10(fft_out[i].norm());
 
         emit FFTData(fft_samples[2], 2);
     }
@@ -187,20 +186,20 @@ void DataProcessor::FFTCalc()
     if (fft_ChEn[3])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fftw_in[i] = decode_samples[(data_pack[i]&0xC0)>>6] * fft_window[i];
+            fft_in[i] = decode_samples[(data_pack[i]&0xC0)>>6] * fft_window[i];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
-        fftwf_execute(fftw_pl);
+        CFFT::Forward(fft_in, fft_out, FFT_SAMPLES_PER_FRAME);
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME/2; i++)
-            (*fft_samples[3])[i] = (double)(10.0*log10(fftw_out[i][0]*fftw_out[i][0]+fftw_out[i][1]*fftw_out[i][1]));
+            (*fft_samples[3])[i] = 10.0*log10(fft_out[i].norm());
 
         emit FFTData(fft_samples[3], 3);
     }
 }
 
-void DataProcessor::ProcessData(QVector<unsigned short> qdata)
+void DataProcessor::ProcessData(QVector<unsigned char> *qdata)
 {
-    foreach(unsigned short data, qdata)
+    foreach(unsigned char data, *qdata)
         data_pack[sample_count++] = data;
 
     if (sample_count < MAX_SAMPLES)

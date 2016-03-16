@@ -14,7 +14,6 @@ TEMPLATE = app
 include(app_ver.pri)
 
 LIBS += $$PWD\cyapi\lib\x86\CyAPI.lib
-LIBS += $$PWD\fftw\lib\libfftw3f-3.lib
 LIBS += /NODEFAULTLIB:LIBCMT
 LIBS += "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\User32.lib"
 LIBS += "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\setupapi.lib"
@@ -24,13 +23,17 @@ SOURCES += main.cpp\
     cy3device.cpp \
     dataprocessor.cpp \
     qcustomplot/qcustomplot.cpp \
-    spectrumform.cpp
+    spectrumform.cpp \
+    fft/complex.cpp \
+    fft/fft.cpp
 
 HEADERS  += mainwindow.h \
     cy3device.h \
     dataprocessor.h \
     qcustomplot/qcustomplot.h \
-    spectrumform.h
+    spectrumform.h \
+    fft/complex.h \
+    fft/fft.h
 
 FORMS    += mainwindow.ui \
     spectrumform.ui

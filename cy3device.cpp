@@ -1,5 +1,11 @@
 #include "cy3device.h"
 
+//#define CY3_DEBUG
+#ifdef CY3_DEBUG
+const int DEBUG_DATA_SIZE = 1048576;
+char buffer[DEBUG_DATA_SIZE];
+#endif
+
 const char* cy3device_get_error_string(cy3device_err_t error)
 {
     switch ( error )
@@ -21,7 +27,7 @@ const char* cy3device_get_error_string(cy3device_err_t error)
 
 cy3device::cy3device(const char* firmwareFileName, QObject *parent) : QObject(parent)
 {
-    Params.USBDevice == NULL;
+    Params.USBDevice = NULL;
     Params.EndPt = NULL;
 
     FWName = firmwareFileName;
@@ -34,10 +40,17 @@ cy3device::cy3device(const char* firmwareFileName, QObject *parent) : QObject(pa
 
     isStreaming = false;
     Params.RunStream = false;
+
+    qdata.fill(0, 2097152);
 }
 
 cy3device_err_t cy3device::OpenDevice()
 {
+#ifdef CY3_DEBUG
+    emit DebugMessage(QString("DEBUG OPEN DEVICE"));
+    return CY3DEV_OK;
+#endif
+
     if (Params.USBDevice == NULL)
         Params.USBDevice = new CCyFX3Device();
 
@@ -132,6 +145,11 @@ cy3device_err_t cy3device::OpenDevice()
 
 void cy3device::CloseDevice()
 {
+#ifdef CY3_DEBUG
+    emit DebugMessage(QString("DEBUG CLOSE DEVICE"));
+    return;
+#endif
+
     if (NULL != Params.USBDevice)
     {
         Params.USBDevice->Close();
@@ -310,6 +328,17 @@ void cy3device::getEndPointParamsByInd(unsigned int EndPointInd, int *Attr, bool
 
 cy3device_err_t cy3device::startTransfer(unsigned int EndPointInd, int PPX, int QueueSize, int TimeOut)
 {
+#ifdef CY3_DEBUG
+    emit DebugMessage("DEBUG START TRANSFER");
+    time.start();
+
+    Params.RunStream = true;
+    isStreaming = true;
+    QMetaObject::invokeMethod( this, "transfer", Qt::QueuedConnection );
+
+    return CY3DEV_OK;
+#endif
+
     if (Params.USBDevice == NULL || !Params.USBDevice->IsOpen())
     {
         qDebug("cy3device::startTransfer device error");
@@ -412,6 +441,39 @@ cy3device_err_t cy3device::startTransfer(unsigned int EndPointInd, int PPX, int 
 
 void cy3device::transfer()
 {
+#ifdef CY3_DEBUG
+    if (!Params.RunStream)
+    {
+        // Memory clean-up
+        abortTransfer(Params.QueueSize, buffers, isoPktInfos, contexts, inOvLap);
+        return;
+    }
+
+    BytesXferred += DEBUG_DATA_SIZE;
+
+    for (int i = 0; i < DEBUG_DATA_SIZE; i++)
+        buffer[i] = 0xFF;//rand()%256 - 128;
+
+    if (time.elapsed() > 1000)
+    {
+        emit ReportBandwidth(BytesXferred/(time.elapsed()/1000.0));
+        BytesXferred = 0;
+        time.restart();
+    }
+
+    processData(buffer, DEBUG_DATA_SIZE);
+
+    #ifdef WIN32
+    Sleep( 10 );
+    #else
+    usleep( 100000 );
+    #endif
+
+    // method loop if no transfer error or external abort request
+    // invoke itself through thread queue to allow executing other queued processes
+    QMetaObject::invokeMethod( this, "transfer", Qt::QueuedConnection );
+    return;
+#endif
     if (!Params.RunStream)
     {
         // Memory clean-up
@@ -465,7 +527,7 @@ void cy3device::transfer()
 
         if (time.elapsed() > 1000)
         {
-            emit ReportBandwidth(BytesXferred * 1000 /time.elapsed());
+        emit ReportBandwidth(BytesXferred/(time.elapsed()/1000.0));
             BytesXferred = 0;
             time.restart();
         }
@@ -491,6 +553,12 @@ void cy3device::transfer()
 
 void cy3device::abortTransfer(int pending, PUCHAR *buffers, CCyIsoPktInfo **isoPktInfos, PUCHAR *contexts, OVERLAPPED *inOvLap)
 {
+#ifdef CY3_DEBUG
+    Params.RunStream = false;
+    isStreaming = false;
+    emit DebugMessage("DEBUG ABORT TRANSFER");
+    return;
+#endif
     long len = Params.EndPt->MaxPktSize * Params.PPX;
 
     for (int j=0; j< Params.QueueSize; j++)
@@ -529,16 +597,14 @@ void cy3device::stopTransfer()
     Params.RunStream = false;
 }
 
-// repack data array into 16bit samples array and send outwards
+// repack data into 8bit samples QVector and send the pointer
 void cy3device::processData(char *data, int size)
 {
-    unsigned short* sdata = (unsigned short*) data;
-    int ssize = size/2;
-    //testDataBits16(sdata, ssize);
+    // take every other byte 
+	// input is a 16bit sample, 8bit lsb are 4 channels by 2 bit
+    qdata.resize(size/2);
+    for (int i = 1; i < size; i+=2)
+        qdata[i/2] = data[i];
 
-    QVector<unsigned short> qdata;
-    qdata.resize(ssize);
-    std::copy(sdata, sdata+ssize, qdata.begin());
-
-    emit RawData(qdata);
+    emit RawData(&qdata);
 }

@@ -78,6 +78,8 @@ private:
 
     int CurrQueue;
 
+    QVector<unsigned char> qdata;
+
     cy3device_err_t scan(int &loadable_count , int &streamable_count);
     cy3device_err_t prepareEndPoints();
     void getEndPointParamsByInd(unsigned int EndPointInd, int *Attr, bool *In, int *MaxPktSize, int *MaxBurst, int *Interface, int *Address);
@@ -96,9 +98,9 @@ public:
 signals:
     void DebugMessage(QString Message);
 
-    void ReportBandwidth(int BW);
+    void ReportBandwidth(double BW);
 
-    void RawData(QVector<unsigned short> qdata);
+    void RawData(QVector<unsigned char>* qdata);
 
 public slots:
     cy3device_err_t OpenDevice();

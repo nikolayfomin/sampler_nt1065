@@ -43,14 +43,14 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(Proc, SIGNAL(AbortDump()),
             this, SLOT(handleAbortDump()));
 
-    connect(Device, SIGNAL(RawData(QVector<unsigned short>)),
-            Proc, SLOT(ProcessData(QVector<unsigned short>)));
+    connect(Device, SIGNAL(RawData(QVector<unsigned char>*)),
+            Proc, SLOT(ProcessData(QVector<unsigned char>*)));
 
     connect(Device, SIGNAL(DebugMessage(QString)),
             this, SLOT(DebugParser(QString)));
 
-    connect(Device, SIGNAL(ReportBandwidth(int)),
-            this, SLOT(DisplayBandwidth(int)));
+    connect(Device, SIGNAL(ReportBandwidth(double)),
+            this, SLOT(DisplayBandwidth(double)));
 
     connect(Proc, SIGNAL(ProcessorMessage(QString)),
             this, SLOT(DebugParser(QString)));
@@ -107,7 +107,7 @@ void MainWindow::DebugParser(QString Message)
     ui->listDebug->scrollToBottom();
 }
 
-void MainWindow::DisplayBandwidth(int BW)
+void MainWindow::DisplayBandwidth(double BW)
 {
     ui->labelBW->setText(QString("Bandwidth: %1 MSps").arg(BW/2.0/1000000.0)); // div by 2 cause samples are 16bit
 }
