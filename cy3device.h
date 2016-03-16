@@ -98,7 +98,7 @@ public:
 signals:
     void DebugMessage(QString Message);
 
-    void ReportBandwidth(double BW);
+    void ReportBandwidth(int BW);
 
     void RawData(QVector<unsigned char>* qdata);
 

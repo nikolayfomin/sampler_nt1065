@@ -525,7 +525,7 @@ void cy3device::transfer()
                 Failures++;
         }
 
-        if (time.elapsed() > 1000)
+        if (time.elapsed() > 2000)
         {
         emit ReportBandwidth(BytesXferred/(time.elapsed()/1000.0));
             BytesXferred = 0;

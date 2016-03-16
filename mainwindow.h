@@ -26,7 +26,7 @@ public:
 private slots:
     void on_buttonOpenDevice_clicked();
     void DebugParser(QString Message);
-    void DisplayBandwidth(double BW);
+    void DisplayBandwidth(int BW);
 
     void handleAbortDump();
 
