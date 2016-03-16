@@ -59,19 +59,23 @@ SpectrumForm::~SpectrumForm()
 
 void SpectrumForm::ProcessData(QVector<double> *data, int channel)
 {
-     if (data->size() < PLOT_RESOLUTION)
-         return;
+    if (data->size() < PLOT_RESOLUTION)
+        return;
 
-     for (int i = 0; i < PLOT_RESOLUTION; i++)
-     {
-         //(*expAved)[i] -= (*expAved)[i]*expAveC;
-         //(*expAved)[i] += (*spc)[i]*expAveC;
-         (*y_axis[channel])[i] += ((*data)[i] - (*y_axis[channel])[i])/AverageFactor;
-     }
+    for (int i = 0; i < PLOT_RESOLUTION; i++)
+    {
+        //(*expAved)[i] -= (*expAved)[i]*expAveC;
+        //(*expAved)[i] += (*spc)[i]*expAveC;
+        (*y_axis[channel])[i] += ((*data)[i] - (*y_axis[channel])[i])/AverageFactor;
+    }
 
-     plot->graph(channel)->setData(*x_axis, *y_axis[channel]);
+    // autoscale
+    //auto minmax = std::minmax_element((*y_axis[channel]).begin(), (*y_axis[channel]).end());
+    //plot->yAxis->setRange(*minmax.first, *minmax.second);
 
-     plot->replot();
+    plot->graph(channel)->setData(*x_axis, *y_axis[channel]);
+
+    plot->replot();
 }
 
 void SpectrumForm::SetupChannels(double SampleRate, bool Ch1, bool Ch2, bool Ch3, bool Ch4)
