@@ -111,12 +111,19 @@ double averBW = 0.0;
 
 void MainWindow::DisplayBandwidth(int BW)
 {
+#if 0
     // div by 2 cause samples are 16bit
     if (averBW > 1.0)
         averBW += (BW/2.0/1000000.0  - averBW)/2.0;
     else
         averBW = BW/2.0/1000000.0;
-
+#else
+    // do not div by 2 cause samples are 8bit
+    if (averBW > 1.0)
+        averBW += (BW/1000000.0  - averBW)/2.0;
+    else
+        averBW = BW/1000000.0;
+#endif
     ui->labelBW->setText(QString("Bandwidth: ~%1 MSps").arg(averBW,0,'f',1));
 }
 

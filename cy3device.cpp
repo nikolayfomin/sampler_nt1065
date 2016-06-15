@@ -73,7 +73,7 @@ cy3device_err_t cy3device::OpenDevice()
 
         if (!(checkFile.exists() && checkFile.isFile()))
             return CY3DEV_ERR_FIRMWARE_FILE_IO_ERROR;
-
+#if 0
         if ( Params.USBDevice->IsBootLoaderRunning() )
         {
             int retCode  = Params.USBDevice->DownloadFw((char*)FWName.toStdString().c_str(), FX3_FWDWNLOAD_MEDIA_TYPE::RAM);
@@ -98,7 +98,7 @@ cy3device_err_t cy3device::OpenDevice()
             qDebug("__error__ cy3device::OpenDevice() StartParams.USBDevice->IsBootLoaderRunning() is FALSE\n" );
             return CY3DEV_ERR_BAD_DEVICE;
         }
-
+#endif
     // reconnect device if firmware is flashed (new Product ID)
         int PAUSE_AFTER_FLASH_SECONDS = 2;
         qDebug("cy3device::OpenDevice() flash completed!\nPlease wait for %d seconds\n", PAUSE_AFTER_FLASH_SECONDS );

@@ -12,8 +12,8 @@
 
 #define MAX_QUEUE_SZ        64
 #define MAX_TRANSFER_LENGTH ( 0x400000 )
-#define VENDOR_ID           ( 0x04B4 )
-#define PRODUCT_STREAM      ( 0x00F1 )
+#define VENDOR_ID           ( 0x1209 )
+#define PRODUCT_STREAM      ( 0xF010 )
 #define PRODUCT_BOOT        ( 0x00F3 )
 
 enum cy3device_err_t {
