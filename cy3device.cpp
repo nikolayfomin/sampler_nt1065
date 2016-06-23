@@ -602,9 +602,10 @@ void cy3device::processData(char *data, int size)
 {
     // take every other byte 
 	// input is a 16bit sample, 8bit lsb are 4 channels by 2 bit
-    qdata.resize(size/2);
-    for (int i = 0; i < size; i+=2)
-        qdata[i/2] = data[i];
+    qdata.resize(size);
+
+    for (int i = 0; i < size; i++)
+        qdata[i] = data[i];
 
     emit RawData(&qdata);
 }
