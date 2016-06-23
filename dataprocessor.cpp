@@ -5,7 +5,9 @@ const int MAX_SAMPLES = 2*1024*1024;
 const int FFT_SAMPLES_PER_FRAME = 65536;
 const int FFT_SKIP_FRAMES = 5;
 
-const double decode_samples[4] = {1.0, 3.0, -1.0, -3.0};
+//const double decode_samples[4] = {1.0, 3.0, -1.0, -3.0};
+const double decode_samples[4] = {1.0, -1.0, 3.0, -3.0};
+
 
 DataProcessor::DataProcessor(QObject *parent) : QObject(parent)
 {
@@ -65,10 +67,10 @@ void DataProcessor::FillCalc()
 {
     for(int i = 0; i < sample_count; i++)
     {
-        cnt_ch1[(data_pack[i] & 0x03) >> 0]++;
-        cnt_ch2[(data_pack[i] & 0x0C) >> 2]++;
-        cnt_ch3[(data_pack[i] & 0x30) >> 4]++;
-        cnt_ch4[(data_pack[i] & 0xC0) >> 6]++;
+        cnt_ch4[(data_pack[i] & 0x03) >> 0]++;
+        cnt_ch3[(data_pack[i] & 0x0C) >> 2]++;
+        cnt_ch2[(data_pack[i] & 0x30) >> 4]++;
+        cnt_ch1[(data_pack[i] & 0xC0) >> 6]++;
         fill_sample_count++;
     }
 
@@ -91,10 +93,10 @@ void DataProcessor::FillCalc()
 
         QString msg;
         msg += QTime::currentTime().toString() + ":" + QString("%1").arg(QTime::currentTime().msec(),3, 10, QLatin1Char( '0' )) + "\n";
-        msg += QString("Channel1 fill: %1 %2 %3 %4\n").arg(fill1[3]).arg(fill1[2]).arg(fill1[0]).arg(fill1[1]);
-        msg += QString("Channel2 fill: %1 %2 %3 %4\n").arg(fill2[3]).arg(fill2[2]).arg(fill2[0]).arg(fill2[1]);
-        msg += QString("Channel3 fill: %1 %2 %3 %4\n").arg(fill3[3]).arg(fill3[2]).arg(fill3[0]).arg(fill3[1]);
-        msg += QString("Channel4 fill: %1 %2 %3 %4\n").arg(fill4[3]).arg(fill4[2]).arg(fill4[0]).arg(fill4[1]);
+        msg += QString("Channel1 fill: %1 %2 %3 %4\n").arg(fill1[3]).arg(fill1[1]).arg(fill1[0]).arg(fill1[2]);
+        msg += QString("Channel2 fill: %1 %2 %3 %4\n").arg(fill2[3]).arg(fill2[1]).arg(fill2[0]).arg(fill2[2]);
+        msg += QString("Channel3 fill: %1 %2 %3 %4\n").arg(fill3[3]).arg(fill3[1]).arg(fill3[0]).arg(fill3[2]);
+        msg += QString("Channel4 fill: %1 %2 %3 %4\n").arg(fill4[3]).arg(fill4[1]).arg(fill4[0]).arg(fill4[2]);
 
         emit ProcessorMessage(msg);
 
@@ -144,7 +146,7 @@ void DataProcessor::FFTCalc()
     if (fft_ChEn[0])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fft_in[i] = decode_samples[(data_pack[i]&0x03)>>0] * fft_window[i];
+            fft_in[i] = decode_samples[(data_pack[i]&0xC0)>>6] * fft_window[i];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
         CFFT::Forward(fft_in, fft_out, FFT_SAMPLES_PER_FRAME);
@@ -158,7 +160,7 @@ void DataProcessor::FFTCalc()
     if (fft_ChEn[1])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fft_in[i] = decode_samples[(data_pack[i]&0x0C)>>2] * fft_window[i];
+            fft_in[i] = decode_samples[(data_pack[i]&0x30)>>4] * fft_window[i];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
         CFFT::Forward(fft_in, fft_out, FFT_SAMPLES_PER_FRAME);
@@ -172,7 +174,7 @@ void DataProcessor::FFTCalc()
     if (fft_ChEn[2])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fft_in[i] = decode_samples[(data_pack[i]&0x30)>>4] * fft_window[i];
+            fft_in[i] = decode_samples[(data_pack[i]&0x0C)>>2] * fft_window[i];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
         CFFT::Forward(fft_in, fft_out, FFT_SAMPLES_PER_FRAME);
@@ -186,7 +188,7 @@ void DataProcessor::FFTCalc()
     if (fft_ChEn[3])
     {
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fft_in[i] = decode_samples[(data_pack[i]&0xC0)>>6] * fft_window[i];
+            fft_in[i] = decode_samples[(data_pack[i]&0x03)>>0] * fft_window[i];
             //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
         }
         CFFT::Forward(fft_in, fft_out, FFT_SAMPLES_PER_FRAME);
