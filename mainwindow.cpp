@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "qcoreapplication.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -19,6 +20,8 @@ MainWindow::MainWindow(QWidget *parent) :
     DeviceThread = new QThread ;
 
     ui->setupUi(this);
+
+    setWindowFlags(windowFlags() ^ Qt::WindowMinimizeButtonHint ^ Qt::WindowMaximizeButtonHint);
 
     connect(ui->checkFillCalc, SIGNAL(clicked(bool)),
             Proc, SLOT(enableFillCalc(bool)));
@@ -99,6 +102,13 @@ MainWindow::~MainWindow()
     delete ProcThread;
 
     delete spectrumform;
+}
+
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    qDebug()<<"closeEvent";
+    QCoreApplication::quit();
 }
 
 void MainWindow::DebugParser(QString Message)

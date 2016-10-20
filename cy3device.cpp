@@ -41,7 +41,13 @@ cy3device::cy3device(const char* firmwareFileName, QObject *parent) : QObject(pa
     isStreaming = false;
     Params.RunStream = false;
 
-    qdata.fill(0, 2097152);
+    prev = 0;
+    cc = 0;
+    cc_one = 0;
+
+    streamStarted = false;
+
+  //  qdata.fill(0, 2097152);
 }
 
 cy3device_err_t cy3device::OpenDevice()
@@ -150,6 +156,10 @@ void cy3device::CloseDevice()
     return;
 #endif
 
+    if (streamStarted) {
+        StopStreamQueue();
+    }
+
     if (NULL != Params.USBDevice)
     {
         Params.USBDevice->Close();
@@ -227,14 +237,97 @@ cy3device_err_t cy3device::ReadSPI(unsigned char Address, unsigned char* Data)
     }
 }
 
+cy3device_err_t cy3device::startStop(bool start)
+{
+    if (Params.USBDevice == NULL || !Params.USBDevice->IsOpen())
+    {
+        qDebug("cy3device::startStop device error");
+        return CY3DEV_ERR_BAD_DEVICE;
+    }
+
+    UCHAR buf[16];
+
+    CCyControlEndPoint* CtrlEndPt;
+    CtrlEndPt = Params.USBDevice->ControlEndPt;
+    CtrlEndPt->Target = TGT_DEVICE;
+    CtrlEndPt->ReqType = REQ_VENDOR;
+    CtrlEndPt->Direction = DIR_FROM_DEVICE;
+    CtrlEndPt->ReqCode = start ? 0x30 : 0x31;
+    CtrlEndPt->Value = 0;
+    CtrlEndPt->Index = 0;
+    long len = 4;
+    if (CtrlEndPt->XferData(&buf[0], len))
+    {
+        qDebug("cy3device::startStop %d ok", start);
+        return CY3DEV_OK;
+    }
+    else
+    {
+        qDebug("cy3device::startStop fail");
+        return CY3DEV_ERR_CTRL_TX_FAIL;
+    }
+}
+
+cy3device_err_t cy3device::reset()
+{
+    if (Params.USBDevice == NULL || !Params.USBDevice->IsOpen())
+    {
+        qDebug("cy3device::reset device error");
+        return CY3DEV_ERR_BAD_DEVICE;
+    }
+
+    UCHAR buf[16];
+
+    CCyControlEndPoint* CtrlEndPt;
+    CtrlEndPt = Params.USBDevice->ControlEndPt;
+    CtrlEndPt->Target = TGT_DEVICE;
+    CtrlEndPt->ReqType = REQ_VENDOR;
+    CtrlEndPt->Direction = DIR_FROM_DEVICE;
+    CtrlEndPt->ReqCode = 0x32;
+    CtrlEndPt->Value = 0;
+    CtrlEndPt->Index = 0;
+    long len = 4;
+    if (CtrlEndPt->XferData(&buf[0], len))
+    {
+        qDebug("cy3device::reset ok");
+        return CY3DEV_OK;
+    }
+    else
+    {
+        qDebug("cy3device::reset fail");
+        return CY3DEV_ERR_CTRL_TX_FAIL;
+    }
+}
+
+
+void cy3device::StartStreamQueue()
+{
+    streamStarted = true;
+    cc = 0;
+    cc_one = 0;
+    reset();
+    QThread::usleep(500000);
+    startTransfer(0, 128, 4, 1500);
+    startStop(true);
+    qDebug()<<"StreamStarted";
+}
+
 void cy3device::StartStream()
 {
-    startTransfer(0, 128, 4, 1500);
+    QMetaObject::invokeMethod( this, "StartStreamQueue", Qt::QueuedConnection );
+}
+
+void cy3device::StopStreamQueue()
+{
+    stopTransfer();
+    startStop(false);
+    streamStarted = false;
+    qDebug()<<"StreamStopped";
 }
 
 void cy3device::StopStream()
 {
-    stopTransfer();
+    QMetaObject::invokeMethod( this, "StopStreamQueue", Qt::QueuedConnection );
 }
 
 cy3device_err_t cy3device::scan(int &loadable_count, int &streamable_count)
@@ -597,15 +690,29 @@ void cy3device::stopTransfer()
     Params.RunStream = false;
 }
 
+
 // repack data into 8bit samples QVector and send the pointer
 void cy3device::processData(char *data, int size)
 {
-    // take every other byte 
-	// input is a 16bit sample, 8bit lsb are 4 channels by 2 bit
-    qdata.resize(size);
+    QVector<unsigned char> *qqdata = new QVector<unsigned char>(size);
 
-    for (int i = 0; i < size; i++)
-        qdata[i] = data[i];
-
-    emit RawData(&qdata);
+    memcpy(qqdata->data(), data, size);
+#if 0
+    for (int i = 0; i < size; i++) {
+        if((unsigned char)data[i] != prev && (unsigned char)data[i] != (unsigned char)(prev+1)&0xff) {
+            emit DebugMessage(QString::asprintf("position\t%llu\tprev %u\tcurr %u", cc, prev, (unsigned char)data[i]));
+           // qDebug("cc %llu prev %u curr %u", cc, prev, (unsigned char)data[i]);
+        } else if ((unsigned char)data[i] == (unsigned char)(prev+1)&0xff) {
+            if (cc_one != 500) {
+                emit DebugMessage(QString::asprintf("position\t%llu\tprev %u\tcurr %u\tnumber %u", cc, prev, (unsigned char)data[i], cc_one));
+            }
+            cc_one = 0;
+        } else if ((unsigned char)data[i] == prev) {
+            cc_one++;
+        }
+        prev = (unsigned char)data[i];
+        cc++;
+    }
+#endif
+    emit RawData(qqdata);
 }

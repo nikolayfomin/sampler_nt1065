@@ -20,6 +20,7 @@ private:
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
+    void closeEvent(QCloseEvent *event);
 
     SpectrumForm *spectrumform;
 

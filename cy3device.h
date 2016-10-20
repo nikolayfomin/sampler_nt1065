@@ -78,7 +78,13 @@ private:
 
     int CurrQueue;
 
-    QVector<unsigned char> qdata;
+   // QVector<unsigned char> qdata;
+
+    unsigned char prev;
+    unsigned long long cc;
+    long cc_one;
+
+    bool streamStarted;
 
     cy3device_err_t scan(int &loadable_count , int &streamable_count);
     cy3device_err_t prepareEndPoints();
@@ -88,6 +94,9 @@ private:
     Q_INVOKABLE void transfer();
     void abortTransfer(int pending, PUCHAR *buffers, CCyIsoPktInfo **isoPktInfos, PUCHAR *contexts, OVERLAPPED *inOvLap);
     Q_INVOKABLE void stopTransfer();
+
+    Q_INVOKABLE void StartStreamQueue();
+    Q_INVOKABLE void StopStreamQueue();
 
     void processData(char* data, int size);
 public:
@@ -108,6 +117,8 @@ public slots:
 
     cy3device_err_t WriteSPI(unsigned char Address, unsigned char Data);
     cy3device_err_t ReadSPI(unsigned char Address, unsigned char *Data);
+    cy3device_err_t startStop(bool start);
+    cy3device_err_t reset();
 
     void StartStream();
     void StopStream();

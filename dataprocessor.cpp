@@ -201,8 +201,13 @@ void DataProcessor::FFTCalc()
 
 void DataProcessor::ProcessData(QVector<unsigned char> *qdata)
 {
-    foreach(unsigned char data, *qdata)
-        data_pack[sample_count++] = data;
+    if (!qdata)
+        return;
+
+    memcpy(data_pack.data() + sample_count, qdata->data(), qdata->size());
+    sample_count += qdata->size();
+
+    delete qdata;
 
     if (sample_count < MAX_SAMPLES)
         return;
