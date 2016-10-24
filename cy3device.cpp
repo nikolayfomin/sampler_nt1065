@@ -302,13 +302,19 @@ cy3device_err_t cy3device::reset()
 
 void cy3device::StartStreamQueue()
 {
+    QThread::currentThread()->setPriority(QThread::HighestPriority);
+
     streamStarted = true;
     cc = 0;
     cc_one = 0;
+
     reset();
+
     QThread::usleep(500000);
+
     startTransfer(0, 128, 4, 1500);
     startStop(true);
+
     qDebug()<<"StreamStarted";
 }
 
@@ -322,6 +328,7 @@ void cy3device::StopStreamQueue()
     stopTransfer();
     startStop(false);
     streamStarted = false;
+    QThread::currentThread()->setPriority(QThread::NormalPriority);
     qDebug()<<"StreamStopped";
 }
 
