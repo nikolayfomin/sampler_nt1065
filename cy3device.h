@@ -85,6 +85,10 @@ private:
     long cc_one;
 
     bool streamStarted;
+    bool errorShown;
+
+    QMutex ccMutex;
+    long long ccData;
 
     cy3device_err_t scan(int &loadable_count , int &streamable_count);
     cy3device_err_t prepareEndPoints();
@@ -104,8 +108,12 @@ public:
 
     bool isStreaming;
 
+    void ccInc(long long bytes);
+
 signals:
     void DebugMessage(QString Message);
+
+    void StopTransfer();
 
     void ReportBandwidth(int BW);
 

@@ -80,7 +80,7 @@
       <item>
        <widget class="QLabel" name="labelDumpSize">
         <property name="text">
-         <string>Max file size (bytes):</string>
+         <string>Max file size (Mbytes):</string>
         </property>
        </widget>
       </item>
@@ -92,14 +92,17 @@
           <height>0</height>
          </size>
         </property>
+        <property name="minimum">
+         <number>0</number>
+        </property>
         <property name="maximum">
-         <number>1049362432</number>
+         <number>500000000</number>
         </property>
         <property name="singleStep">
          <number>1</number>
         </property>
         <property name="value">
-         <number>1048576</number>
+         <number>100</number>
         </property>
        </widget>
       </item>

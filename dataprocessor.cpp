@@ -9,7 +9,7 @@ const int FFT_SKIP_FRAMES = 5;
 const double decode_samples[4] = {1.0, -1.0, 3.0, -3.0};
 
 
-DataProcessor::DataProcessor(QObject *parent) : QObject(parent)
+DataProcessor::DataProcessor(cy3device *dev, QObject *parent) : QObject(parent)
 {
     data_pack.resize(2*MAX_SAMPLES);
     sample_count = 0;
@@ -23,6 +23,8 @@ DataProcessor::DataProcessor(QObject *parent) : QObject(parent)
     dump_count = 0;
     dumpfile = NULL;
     dump_limit = 0;
+
+    device = dev;
 
     fft_in  = new complex[FFT_SAMPLES_PER_FRAME];
     fft_out = new complex[FFT_SAMPLES_PER_FRAME];
@@ -109,25 +111,35 @@ void DataProcessor::FillCalc()
     }
 }
 
+#define MIN(x,y) ((x)>(y)?(y):(x))
+
 void DataProcessor::FileDump()
 {
-    if (!enFileDump || !dumpfile->isOpen())
+
+    mutex.lock();
+    if (!enFileDump || !dumpfile->isOpen()) {
+        mutex.unlock();
         return;
+    }
 
-    for(int i = 0; i < sample_count; i++)
+    long long toWrite;
+
+    if (dump_limit)
+        toWrite = MIN(sample_count, dump_limit-dump_count);
+    else
+        toWrite = sample_count;
+
+    dumpfile->write((const char*)data_pack.data(), toWrite);
+    mutex.unlock();
+
+    dumpfile->flush();
+    dump_count += toWrite;
+
+    if (dump_limit && dump_count >= dump_limit)
     {
-        if (dump_limit && dump_count >= dump_limit)
-        {
-            enableFileDump(false,"",0);
+        enableFileDump(false,"",0);
 
-            emit AbortDump();
-
-            return;
-        }
-        unsigned char cdata = data_pack[i] & 0xFF;
-        //fputc(cdata, dumpfile);
-        dumpfile->write((const char*)&cdata,1);
-        dump_count++;
+        emit AbortDump();
     }
 }
 
@@ -207,6 +219,7 @@ void DataProcessor::ProcessData(QVector<unsigned char> *qdata)
     memcpy(data_pack.data() + sample_count, qdata->data(), qdata->size());
     sample_count += qdata->size();
 
+    device->ccInc(qdata->size() * (-1));
     delete qdata;
 
     if (sample_count < MAX_SAMPLES)
@@ -216,8 +229,9 @@ void DataProcessor::ProcessData(QVector<unsigned char> *qdata)
     if (enFillCalc)
         FillCalc();
 
-    if (enFileDump)
+    if (enFileDump) {
         FileDump();
+    }
 
     if (enFFT)
         FFTCalc();
@@ -235,12 +249,14 @@ void DataProcessor::enableFileDump(bool Enable, QString FileName, long SampleCou
     if (enFileDump == Enable)
         return;
 
+    mutex.lock();
+
     enFileDump = Enable;
 
     if (Enable)
     {
         dump_count = 0;
-        dump_limit = SampleCount;
+        dump_limit = (long long)SampleCount * 1024 * 1024;
         dumpfilename = FileName;
 
         dumpfile = new QFile(dumpfilename);
@@ -257,8 +273,10 @@ void DataProcessor::enableFileDump(bool Enable, QString FileName, long SampleCou
         dumpfile = NULL;
 
         if (dump_count)
-            emit ProcessorMessage(QString("Dumped %1 bytes to %2").arg(dump_count).arg(dumpfilename));
+            emit ProcessorMessage(QString("Dumped %1 Mbytes to %2").arg(dump_count/(1024*1024)).arg(dumpfilename));
     }
+
+    mutex.unlock();
 }
 
 void DataProcessor::enableFFTCalc(bool Enable, int SkipFrames, bool Ch1, bool Ch2, bool Ch3, bool Ch4)

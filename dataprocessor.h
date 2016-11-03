@@ -8,6 +8,7 @@
 #include <QVector>
 #include <windows.h>
 #include "fft/fft.h"
+#include "cy3device.h"
 
 class DataProcessor : public QObject
 {
@@ -32,11 +33,13 @@ private:
     // file dump variables
     QFile *dumpfile;
     QString dumpfilename;
-    long dump_limit;
-    long dump_count;
+    long long dump_limit;
+    long long dump_count;
 
     bool enFileDump;
     void FileDump();
+
+    cy3device *device;
 
     // fft calculation variables
     complex *fft_in;
@@ -47,10 +50,12 @@ private:
     int fftw_cnt;
     QVector<double> fft_window;
 
+    QMutex mutex;
+
     bool enFFT;
     void FFTCalc();
 public:
-    explicit DataProcessor(QObject *parent = 0);
+    explicit DataProcessor(cy3device *dev, QObject *parent = 0);
     ~DataProcessor();
 signals:
     void ProcessorMessage(QString Message);

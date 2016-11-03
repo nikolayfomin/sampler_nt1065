@@ -13,11 +13,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     spectrumform = new SpectrumForm();
 
-    Proc = new DataProcessor();
-    ProcThread = new QThread;
-
     Device = new cy3device("SlaveFifoSync.img");
     DeviceThread = new QThread ;
+
+    Proc = new DataProcessor(Device);
+    ProcThread = new QThread;
 
     ui->setupUi(this);
 
@@ -51,6 +51,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(Device, SIGNAL(DebugMessage(QString)),
             this, SLOT(DebugParser(QString)));
+
+    connect(Device, SIGNAL(StopTransfer()),
+                this, SLOT(on_buttonCloseDevice_clicked()));
 
     connect(Device, SIGNAL(ReportBandwidth(int)),
             this, SLOT(DisplayBandwidth(int)));
@@ -134,7 +137,11 @@ void MainWindow::DisplayBandwidth(int BW)
     else
         averBW = BW/1000000.0;
 #endif
-    ui->labelBW->setText(QString("Bandwidth: ~%1 MSps").arg(averBW,0,'f',1));
+    if(BW)
+        ui->labelBW->setText(QString("Bandwidth: ~%1 MSps").arg(averBW,0,'f',1));
+    else
+        ui->labelBW->setText(QString(""));
+
 }
 
 void MainWindow::handleAbortDump()
@@ -154,7 +161,10 @@ void MainWindow::on_buttonOpenDevice_clicked()
                               Q_RETURN_ARG( cy3device_err_t , retval));
 
     DebugParser(QString(""));
-    DebugParser(QString("OpenDevice returned %1").arg(cy3device_get_error_string(retval)));
+    if (retval == CY3DEV_OK)
+        DebugParser(QString("OpenDevice OK"));
+    else
+        DebugParser(QString("OpenDevice error: %1").arg(cy3device_get_error_string(retval)));
 
     if (retval == CY3DEV_OK)
     {
@@ -168,6 +178,20 @@ void MainWindow::on_buttonOpenDevice_clicked()
 
 void MainWindow::on_buttonCloseDevice_clicked()
 {
+    if (filedumping)
+    {
+        filedumping = false;
+
+        QMetaObject::invokeMethod(Proc ,
+                                  "enableFileDump" ,
+                                  //Qt::BlockingQueuedConnection,
+                                  Qt::DirectConnection,
+                                  Q_ARG(bool, false),
+                                  Q_ARG(QString, ui->editDumpFileName->text()),
+                                  Q_ARG(long, 0));
+        ui->buttonFileDump->setText("Dump data to file");
+    }
+
     if (Device->isStreaming)
         QMetaObject::invokeMethod(Device ,
                                   "StopStream" ,
@@ -180,13 +204,14 @@ void MainWindow::on_buttonCloseDevice_clicked()
                               "CloseDevice" ,
                               Qt::BlockingQueuedConnection);
 
-    DebugParser(QString("CloseDevice returned"));
+    DebugParser(QString("CloseDevice OK"));
 
     ui->buttonOpenDevice->setEnabled(true);
     ui->buttonCloseDevice->setEnabled(false);
     ui->buttonReadID->setEnabled(false);
     ui->buttonStartStream->setEnabled(false);
     ui->buttonStopStream->setEnabled(false);
+    DisplayBandwidth(0);
 }
 
 void MainWindow::on_buttonReadID_clicked()
@@ -202,7 +227,7 @@ void MainWindow::on_buttonReadID_clicked()
                               Q_ARG(unsigned char*, &data[0]));
     if (retval != CY3DEV_OK)
     {
-        DebugParser(QString("ReadSPI returned %1").arg(cy3device_get_error_string(retval)));
+        DebugParser(QString("ReadSPI error: %1").arg(cy3device_get_error_string(retval)));
         return;
     }
 
@@ -214,7 +239,7 @@ void MainWindow::on_buttonReadID_clicked()
                               Q_ARG(unsigned char*, &data[1]));
     if (retval != CY3DEV_OK)
     {
-        DebugParser(QString("ReadSPI returned %1").arg(cy3device_get_error_string(retval)));
+        DebugParser(QString("ReadSPI error: %1").arg(cy3device_get_error_string(retval)));
         return;
     }
 
@@ -259,7 +284,8 @@ void MainWindow::on_buttonFileDump_clicked()
 
         QMetaObject::invokeMethod(Proc ,
                                   "enableFileDump" ,
-                                  Qt::BlockingQueuedConnection,
+                                  //Qt::BlockingQueuedConnection,
+                                  Qt::DirectConnection,
                                   Q_ARG(bool, false),
                                   Q_ARG(QString, ui->editDumpFileName->text()),
                                   Q_ARG(long, 0));
@@ -271,7 +297,8 @@ void MainWindow::on_buttonFileDump_clicked()
 
         QMetaObject::invokeMethod(Proc ,
                                   "enableFileDump" ,
-                                  Qt::BlockingQueuedConnection,
+                                  //Qt::BlockingQueuedConnection,
+                                  Qt::DirectConnection,
                                   Q_ARG(bool, true),
                                   Q_ARG(QString, ui->editDumpFileName->text()),
                                   Q_ARG(long, ui->spinFileSize->value()));
