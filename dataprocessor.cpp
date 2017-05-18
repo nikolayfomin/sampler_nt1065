@@ -143,6 +143,20 @@ void DataProcessor::FileDump()
     }
 }
 
+char swap_bits_in_byte(unsigned char in)
+{
+    int i = 0;
+    unsigned char out = 0;
+
+    for (; i < 8; i++) {
+        int b = (in & 1);
+        out |= b;
+        out = (out << 1) & (~0x01);
+        in = in >> 1;
+    }
+    return out;
+}
+
 void DataProcessor::FFTCalc()
 {
     if (sample_count < FFT_SAMPLES_PER_FRAME)
@@ -157,10 +171,33 @@ void DataProcessor::FFTCalc()
 // Channel 1
     if (fft_ChEn[0])
     {
-        for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fft_in[i] = decode_samples[(data_pack[i]&0xC0)>>6] * fft_window[i];
-            //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
+        if (fft_adc == 0) {
+            for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
+                fft_in[i] = decode_samples[(data_pack[i]&0xC0)>>6] * fft_window[i];
+                //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
+            }
+        } else if (fft_adc == 1) {
+            for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
+                unsigned char b = data_pack[i];
+                int f = (int)((b&0xf0)>>4);
+                if (f > 7) {
+                    f = f - 16;
+                }
+                fft_in[i] = f * fft_window[i];;
+              //  qDebug() << b << " ";
+            }
+        } else if (fft_adc == 2) {
+            for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
+                unsigned char b = data_pack[i];
+                int f = (int)b;
+                if (f > 127) {
+                    f = f - 256;
+                }
+                fft_in[i] = f * fft_window[i];
+                //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
+            }
         }
+
         CFFT::Forward(fft_in, fft_out, FFT_SAMPLES_PER_FRAME);
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME/2; i++)
             (*fft_samples[0])[i] = 10.0*log10(fft_out[i].norm());
@@ -171,10 +208,22 @@ void DataProcessor::FFTCalc()
 // Channel 2
     if (fft_ChEn[1])
     {
-        for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
-            fft_in[i] = decode_samples[(data_pack[i]&0x30)>>4] * fft_window[i];
-            //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
+        if (fft_adc == 0) {
+            for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
+                fft_in[i] = decode_samples[(data_pack[i]&0x30)>>4] * fft_window[i];
+                //qDebug() << (data[i]&0x03) << " " << decode_samples[(data[i]&0x03)>>0];
+            }
+        } else if (fft_adc == 1) {
+            for (int i = 0; i < FFT_SAMPLES_PER_FRAME; i++) {
+                unsigned char b = data_pack[i];
+                int f = (int)((b&0x0f));
+                if (f > 7) {
+                    f = f - 16;
+                }
+                fft_in[i] = f * fft_window[i];;
+            }
         }
+
         CFFT::Forward(fft_in, fft_out, FFT_SAMPLES_PER_FRAME);
         for (int i = 0; i < FFT_SAMPLES_PER_FRAME/2; i++)
             (*fft_samples[1])[i] = 10.0*log10(fft_out[i].norm());
@@ -279,7 +328,7 @@ void DataProcessor::enableFileDump(bool Enable, QString FileName, long SampleCou
     mutex.unlock();
 }
 
-void DataProcessor::enableFFTCalc(bool Enable, int SkipFrames, bool Ch1, bool Ch2, bool Ch3, bool Ch4)
+void DataProcessor::enableFFTCalc(bool Enable, int SkipFrames, bool Ch1, bool Ch2, bool Ch3, bool Ch4, int adc)
 {
     enFFT = Enable;
 
@@ -291,5 +340,6 @@ void DataProcessor::enableFFTCalc(bool Enable, int SkipFrames, bool Ch1, bool Ch
         fft_ChEn[3] = Ch4;
 
         fft_skipframes = SkipFrames;
+        fft_adc = adc;
     }
 }

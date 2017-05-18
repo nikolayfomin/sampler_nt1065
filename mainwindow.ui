@@ -59,11 +59,47 @@
      </widget>
     </item>
     <item>
-     <widget class="QCheckBox" name="checkFillCalc">
-      <property name="text">
-       <string>Calculate ADC filling</string>
-      </property>
-     </widget>
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <item>
+       <widget class="QCheckBox" name="checkFillCalc">
+        <property name="text">
+         <string>Calculate ADC filling</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QComboBox" name="comboBoxADC">
+        <item>
+         <property name="text">
+          <string>2-bit ADC</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>4-bit ADC</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>8-bit ADC</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+     </layout>
     </item>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout">

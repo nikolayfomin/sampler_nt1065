@@ -324,9 +324,10 @@ void MainWindow::on_buttonShowSpectrum_clicked()
     spectrumform->setVisible(true);
 }
 
+
 void MainWindow::FFTCalcSetup()
 {
-    //void enableFFTCalc(bool Enable, int SkipFrames, bool Ch1, bool Ch2, bool Ch3, bool Ch4);
+    //void enableFFTCalc(bool Enable, int SkipFrames, bool Ch1, bool Ch2, bool Ch3, bool Ch4, int adc);
     QMetaObject::invokeMethod(Proc ,
                               "enableFFTCalc" ,
                               Qt::BlockingQueuedConnection,
@@ -335,7 +336,8 @@ void MainWindow::FFTCalcSetup()
                               Q_ARG(bool, ui->checkChannel1->isChecked()),
                               Q_ARG(bool, ui->checkChannel2->isChecked()),
                               Q_ARG(bool, ui->checkChannel3->isChecked()),
-                              Q_ARG(bool, ui->checkChannel4->isChecked())
+                              Q_ARG(bool, ui->checkChannel4->isChecked()),
+                              Q_ARG(int, ui->comboBoxADC->currentIndex())
                               );
 
     spectrumform->AverageFactor = ui->spinAverageFactor->value();
@@ -346,4 +348,40 @@ void MainWindow::FFTCalcSetup()
                                 ui->checkChannel3->isChecked(),
                                 ui->checkChannel4->isChecked()
                                 );
+}
+
+void MainWindow::on_comboBoxADC_currentIndexChanged(int index)
+{
+    if (index == 0) {
+        ui->checkChannel1->setEnabled(true);
+        ui->checkChannel2->setEnabled(true);
+        ui->checkChannel3->setEnabled(true);
+        ui->checkChannel4->setEnabled(true);
+
+        ui->checkChannel1->setChecked(true);
+        ui->checkChannel2->setChecked(true);
+        ui->checkChannel3->setChecked(true);
+        ui->checkChannel4->setChecked(true);
+    } else if (index == 1) {
+        ui->checkChannel1->setEnabled(true);
+        ui->checkChannel2->setEnabled(true);
+        ui->checkChannel3->setEnabled(false);
+        ui->checkChannel4->setEnabled(false);
+
+        ui->checkChannel1->setChecked(true);
+        ui->checkChannel2->setChecked(true);
+        ui->checkChannel3->setChecked(false);
+        ui->checkChannel4->setChecked(false);
+    } else if (index == 2) {
+        ui->checkChannel1->setEnabled(true);
+        ui->checkChannel2->setEnabled(false);
+        ui->checkChannel3->setEnabled(false);
+        ui->checkChannel4->setEnabled(false);
+
+        ui->checkChannel1->setChecked(true);
+        ui->checkChannel2->setChecked(false);
+        ui->checkChannel3->setChecked(false);
+        ui->checkChannel4->setChecked(false);
+    }
+    FFTCalcSetup();
 }

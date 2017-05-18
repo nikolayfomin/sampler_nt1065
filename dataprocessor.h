@@ -46,6 +46,7 @@ private:
     complex *fft_out;
     QVector<double>* fft_samples[4];
     int fft_skipframes;
+    int fft_adc;
     bool fft_ChEn[4];
     int fftw_cnt;
     QVector<double> fft_window;
@@ -69,7 +70,7 @@ public slots:
 
     void enableFillCalc(bool Enable);
     void enableFileDump(bool Enable, QString FileName, long SampleCount);
-    void enableFFTCalc(bool Enable, int SkipFrames, bool Ch1, bool Ch2, bool Ch3, bool Ch4);
+    void enableFFTCalc(bool Enable, int SkipFrames, bool Ch1, bool Ch2, bool Ch3, bool Ch4, int adc);
 };
 
 #endif // DATA_PROCESSOR_H

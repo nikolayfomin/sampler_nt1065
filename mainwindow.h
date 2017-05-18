@@ -47,6 +47,8 @@ private slots:
 
     void FFTCalcSetup();
 
+    void on_comboBoxADC_currentIndexChanged(int index);
+
 private:
     Ui::MainWindow *ui;
 
