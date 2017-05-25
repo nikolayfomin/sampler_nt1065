@@ -6,9 +6,26 @@
 #include <QObject>
 #include <QString>
 #include <QVector>
-#include <windows.h>
 #include <vector>
+
+#ifdef Q_OS_WIN
+#include <windows.h>
 #include "cyapi\inc\CyAPI.h"
+#endif
+
+#ifdef Q_OS_LINUX
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <termios.h>
+
+#include <sys/ioctl.h>  /* ioctl */
+
+#include "../../cyp-linux-driver/ntlcyp.h"
+#endif
 
 #define MAX_QUEUE_SZ        64
 #define MAX_TRANSFER_LENGTH ( 0x400000 )
@@ -43,8 +60,13 @@ struct EndPointParams{
 };
 
 struct DeviceParams{
+#ifdef Q_OS_WIN
     CCyFX3Device	*USBDevice;
     CCyUSBEndPoint  *EndPt;
+#endif
+#ifdef Q_OS_LINUX
+    int             fd;
+#endif
     int				PPX;
     long            TransferSize;
     int				QueueSize;
@@ -70,12 +92,12 @@ private:
     int BytesXferred;
     unsigned long Successes;
     unsigned long Failures;
-
+#ifdef Q_OS_WIN
     PUCHAR			*buffers;
     CCyIsoPktInfo	**isoPktInfos;
     PUCHAR			*contexts;
     OVERLAPPED		inOvLap[MAX_QUEUE_SZ];
-
+#endif
     int CurrQueue;
 
    // QVector<unsigned char> qdata;
@@ -96,7 +118,12 @@ private:
 
     cy3device_err_t startTransfer(unsigned int EndPointInd, int PPX, int QueueSize, int TimeOut);
     Q_INVOKABLE void transfer();
+#ifdef Q_OS_WIN
     void abortTransfer(int pending, PUCHAR *buffers, CCyIsoPktInfo **isoPktInfos, PUCHAR *contexts, OVERLAPPED *inOvLap);
+#endif
+#ifdef Q_OS_LINUX
+    void abortTransfer();
+#endif
     Q_INVOKABLE void stopTransfer();
 
     Q_INVOKABLE void StartStreamQueue();

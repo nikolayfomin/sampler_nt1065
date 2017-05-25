@@ -2,7 +2,7 @@
 #define SPECTRUMFORM_H
 
 #include <QWidget>
-#include "qcustomplot\QCustomPlot.h"
+#include "qcustomplot/qcustomplot.h"
 
 namespace Ui {
 class SpectrumForm;

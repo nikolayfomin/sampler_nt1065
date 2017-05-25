@@ -13,11 +13,6 @@ TEMPLATE = app
 
 include(app_ver.pri)
 
-LIBS += $$PWD\cyapi\lib\x86\CyAPI.lib
-LIBS += /NODEFAULTLIB:LIBCMT
-LIBS += "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\User32.lib"
-LIBS += "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\setupapi.lib"
-
 SOURCES += main.cpp\
         mainwindow.cpp \
     cy3device.cpp \
@@ -41,6 +36,11 @@ FORMS    += mainwindow.ui \
 win32-msvc2013 {
     HEADERS += vld/vld.h
 
+    LIBS += $$PWD\cyapi\lib\x86\CyAPI.lib
+ #   LIBS += /NODEFAULTLIB:LIBCMT
+    LIBS += "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\User32.lib"
+    LIBS += "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\setupapi.lib"
+
     LIBS += -L$$PWD/vld/ -vld
     INCLUDEPATH += $$PWD/vld
     DEPENDPATH += $$PWD/vld
@@ -53,14 +53,26 @@ win32-msvc2013 {
     # 32bit toolchain
     QMAKE_LFLAGS += /SUBSYSTEM:CONSOLE,5.01
     LIBS += -L"%ProgramFiles(x86)%/Microsoft SDKs/Windows/7.1A/Lib"
+
+
 }
 
 win32-msvc2010 {
     HEADERS += vld/vld.h
+
+    LIBS += $$PWD\cyapi\lib\x86\CyAPI.lib
+#    LIBS += /NODEFAULTLIB:LIBCMT
+    LIBS += "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\User32.lib"
+    LIBS += "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Lib\setupapi.lib"
 
     LIBS += -L$$PWD/vld/ -vld
     INCLUDEPATH += $$PWD/vld
     DEPENDPATH += $$PWD/vld
 
     PRE_TARGETDEPS += $$PWD/vld/vld.lib
+}
+
+unix {
+
+    #LIBS += -L/usr/lib/i386-linux-gnu/ -lSerialPort
 }
