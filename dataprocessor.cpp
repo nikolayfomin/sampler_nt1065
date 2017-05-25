@@ -67,48 +67,113 @@ DataProcessor::~DataProcessor()
 
 void DataProcessor::FillCalc()
 {
-    for(int i = 0; i < sample_count; i++)
-    {
-        cnt_ch4[(data_pack[i] & 0x03) >> 0]++;
-        cnt_ch3[(data_pack[i] & 0x0C) >> 2]++;
-        cnt_ch2[(data_pack[i] & 0x30) >> 4]++;
-        cnt_ch1[(data_pack[i] & 0xC0) >> 6]++;
-        fill_sample_count++;
-    }
 
-    if (fill_sample_count >= 4*MAX_SAMPLES)
-    {
-        double fill1[4],fill2[4],fill3[4],fill4[4];
-        for (int i = 0; i < 4; i++)
+    if (fft_adc == 0) {
+
+        for(int i = 0; i < sample_count; i++)
         {
-            fill1[i] = 100.0 * cnt_ch1[i]/fill_sample_count;
-            fill2[i] = 100.0 * cnt_ch2[i]/fill_sample_count;
-            fill3[i] = 100.0 * cnt_ch3[i]/fill_sample_count;
-            fill4[i] = 100.0 * cnt_ch4[i]/fill_sample_count;
+            cnt_ch4[(data_pack[i] & 0x03) >> 0]++;
+            cnt_ch3[(data_pack[i] & 0x0C) >> 2]++;
+            cnt_ch2[(data_pack[i] & 0x30) >> 4]++;
+            cnt_ch1[(data_pack[i] & 0xC0) >> 6]++;
+            fill_sample_count++;
         }
-        //                                          -3        -1        1         3
-        qDebug(" ");
-        //qDebug("Channel1 fill: %lf %lf %lf %lf", fill1[3], fill1[2], fill1[0], fill1[1]);
-        //qDebug("Channel2 fill: %lf %lf %lf %lf", fill2[3], fill2[2], fill2[0], fill2[1]);
-        //qDebug("Channel3 fill: %lf %lf %lf %lf", fill3[3], fill3[2], fill3[0], fill3[1]);
-        //qDebug("Channel4 fill: %lf %lf %lf %lf", fill4[3], fill4[2], fill4[0], fill4[1]);
 
-        QString msg;
-        msg += QTime::currentTime().toString() + ":" + QString("%1").arg(QTime::currentTime().msec(),3, 10, QLatin1Char( '0' )) + "\n";
-        msg += QString("Channel1 fill: %1 %2 %3 %4\n").arg(fill1[3]).arg(fill1[1]).arg(fill1[0]).arg(fill1[2]);
-        msg += QString("Channel2 fill: %1 %2 %3 %4\n").arg(fill2[3]).arg(fill2[1]).arg(fill2[0]).arg(fill2[2]);
-        msg += QString("Channel3 fill: %1 %2 %3 %4\n").arg(fill3[3]).arg(fill3[1]).arg(fill3[0]).arg(fill3[2]);
-        msg += QString("Channel4 fill: %1 %2 %3 %4\n").arg(fill4[3]).arg(fill4[1]).arg(fill4[0]).arg(fill4[2]);
+        if (fill_sample_count >= 4*MAX_SAMPLES)
+        {
+            double fill1[4],fill2[4],fill3[4],fill4[4];
+            for (int i = 0; i < 4; i++)
+            {
+                fill1[i] = 100.0 * cnt_ch1[i]/fill_sample_count;
+                fill2[i] = 100.0 * cnt_ch2[i]/fill_sample_count;
+                fill3[i] = 100.0 * cnt_ch3[i]/fill_sample_count;
+                fill4[i] = 100.0 * cnt_ch4[i]/fill_sample_count;
+            }
+            //                                          -3        -1        1         3
+            //qDebug(" ");
+            //qDebug("Channel1 fill: %lf %lf %lf %lf", fill1[3], fill1[2], fill1[0], fill1[1]);
+            //qDebug("Channel2 fill: %lf %lf %lf %lf", fill2[3], fill2[2], fill2[0], fill2[1]);
+            //qDebug("Channel3 fill: %lf %lf %lf %lf", fill3[3], fill3[2], fill3[0], fill3[1]);
+            //qDebug("Channel4 fill: %lf %lf %lf %lf", fill4[3], fill4[2], fill4[0], fill4[1]);
 
-        emit ProcessorMessage(msg);
+            QString msg;
+            msg += QTime::currentTime().toString() + ":" + QString("%1").arg(QTime::currentTime().msec(),3, 10, QLatin1Char( '0' )) + "\n";
+            msg += QString("Channel1 fill: %1 %2 %3 %4\n").arg(fill1[3]).arg(fill1[1]).arg(fill1[0]).arg(fill1[2]);
+            msg += QString("Channel2 fill: %1 %2 %3 %4\n").arg(fill2[3]).arg(fill2[1]).arg(fill2[0]).arg(fill2[2]);
+            msg += QString("Channel3 fill: %1 %2 %3 %4\n").arg(fill3[3]).arg(fill3[1]).arg(fill3[0]).arg(fill3[2]);
+            msg += QString("Channel4 fill: %1 %2 %3 %4\n").arg(fill4[3]).arg(fill4[1]).arg(fill4[0]).arg(fill4[2]);
 
-        std::fill( cnt_ch1, cnt_ch1 + 4, 0 );
-        std::fill( cnt_ch2, cnt_ch2 + 4, 0 );
-        std::fill( cnt_ch3, cnt_ch3 + 4, 0 );
-        std::fill( cnt_ch4, cnt_ch4 + 4, 0 );
+            emit ProcessorMessage(msg);
 
-        fill_sample_count = 0;
+            std::fill( cnt_ch1, cnt_ch1 + 4, 0 );
+            std::fill( cnt_ch2, cnt_ch2 + 4, 0 );
+            std::fill( cnt_ch3, cnt_ch3 + 4, 0 );
+            std::fill( cnt_ch4, cnt_ch4 + 4, 0 );
+
+            fill_sample_count = 0;
+        }
+
+    } else if (fft_adc == 1) {
+
+
+        for(int i = 0; i < sample_count; i++)
+        {
+            int f = (int)((data_pack[i]&0xf0)>>4);
+            if (f > 7) {
+                f = f - 16;
+            }
+            cnt_ch1[8 + f]++;
+
+            f = (int)((data_pack[i]&0x0f));
+            if (f > 7) {
+                f = f - 16;
+            }
+            cnt_ch2[8 + f]++;
+
+            fill_sample_count++;
+        }
+
+
+        if (fill_sample_count >= 4*MAX_SAMPLES)
+        {
+            double fill1[16],fill2[16];
+            for (int i = 0; i < 16; i++)
+            {
+                fill1[i] = 100.0 * cnt_ch1[i]/fill_sample_count;
+                fill2[i] = 100.0 * cnt_ch2[i]/fill_sample_count;
+            }
+            //                                          -3        -1        1         3
+          //  qDebug(" ");
+            //qDebug("Channel1 fill: %lf %lf %lf %lf", fill1[3], fill1[2], fill1[0], fill1[1]);
+            //qDebug("Channel2 fill: %lf %lf %lf %lf", fill2[3], fill2[2], fill2[0], fill2[1]);
+            //qDebug("Channel3 fill: %lf %lf %lf %lf", fill3[3], fill3[2], fill3[0], fill3[1]);
+            //qDebug("Channel4 fill: %lf %lf %lf %lf", fill4[3], fill4[2], fill4[0], fill4[1]);
+
+            QString msg;
+            msg += QTime::currentTime().toString() + ":" + QString("%1").arg(QTime::currentTime().msec(),3, 10, QLatin1Char( '0' )) + "\n";
+            msg += QString("Channel1 fill: %1 %2 %3 %4 %5 %6 %7 %8 %9 %10 %11 %12 %13 %14 %15 %16\n")
+                    .arg(fill1[0]).arg(fill1[1]).arg(fill1[2]).arg(fill1[3])
+                    .arg(fill1[4]).arg(fill1[5]).arg(fill1[6]).arg(fill1[7])
+                    .arg(fill1[8]).arg(fill1[9]).arg(fill1[10]).arg(fill1[11])
+                    .arg(fill1[12]).arg(fill1[13]).arg(fill1[14]).arg(fill1[15]);
+            msg += QString("Channel2 fill: %1 %2 %3 %4 %5 %6 %7 %8 %9 %10 %11 %12 %13 %14 %15 %16\n")
+                    .arg(fill2[0]).arg(fill2[1]).arg(fill2[2]).arg(fill2[3])
+                    .arg(fill2[4]).arg(fill2[5]).arg(fill2[6]).arg(fill2[7])
+                    .arg(fill2[8]).arg(fill2[9]).arg(fill2[10]).arg(fill2[11])
+                    .arg(fill2[12]).arg(fill2[13]).arg(fill2[14]).arg(fill2[15]);
+
+            emit ProcessorMessage(msg);
+
+            std::fill( cnt_ch1, cnt_ch1 + 16, 0 );
+            std::fill( cnt_ch2, cnt_ch2 + 16, 0 );
+
+            fill_sample_count = 0;
+        }
+
+    } else if (fft_adc == 2) {
+        // nope
     }
+
 }
 
 #define MIN(x,y) ((x)>(y)?(y):(x))
@@ -288,9 +353,10 @@ void DataProcessor::ProcessData(QVector<unsigned char> *qdata)
     sample_count = 0;
 }
 
-void DataProcessor::enableFillCalc(bool Enable)
+void DataProcessor::enableFillCalc(bool Enable, int adc)
 {
     enFillCalc = Enable;
+    fft_adc = adc;
 }
 
 void DataProcessor::enableFileDump(bool Enable, QString FileName, long SampleCount)

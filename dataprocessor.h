@@ -6,8 +6,11 @@
 #include <QDebug>
 #include <QString>
 #include <QVector>
-#include <windows.h>
 #include "fft/fft.h"
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
+
 #include "cy3device.h"
 
 class DataProcessor : public QObject
@@ -22,8 +25,8 @@ private:
 
     // filling calculation variables
     int fill_sample_count;
-    int cnt_ch1[4];
-    int cnt_ch2[4];
+    int cnt_ch1[16];
+    int cnt_ch2[16];
     int cnt_ch3[4];
     int cnt_ch4[4];
 
@@ -68,7 +71,7 @@ signals:
 public slots:
     void ProcessData(QVector<unsigned char>* qdata);
 
-    void enableFillCalc(bool Enable);
+    void enableFillCalc(bool Enable, int adc);
     void enableFileDump(bool Enable, QString FileName, long SampleCount);
     void enableFFTCalc(bool Enable, int SkipFrames, bool Ch1, bool Ch2, bool Ch3, bool Ch4, int adc);
 };

@@ -46,6 +46,7 @@ private slots:
     void on_buttonShowSpectrum_clicked();
 
     void FFTCalcSetup();
+    void FillCalcSetup();
 
     void on_comboBoxADC_currentIndexChanged(int index);
 

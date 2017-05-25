@@ -24,7 +24,7 @@ MainWindow::MainWindow(QWidget *parent) :
     setWindowFlags(windowFlags() ^ Qt::WindowMinimizeButtonHint ^ Qt::WindowMaximizeButtonHint);
 
     connect(ui->checkFillCalc, SIGNAL(clicked(bool)),
-            Proc, SLOT(enableFillCalc(bool)));
+            this, SLOT(FillCalcSetup()));
 
     connect(ui->checkFFTCalc, SIGNAL(clicked(bool)),
             this, SLOT(FFTCalcSetup()));
@@ -82,9 +82,14 @@ MainWindow::~MainWindow()
         QMetaObject::invokeMethod(Device ,
                                   "StopStream" ,
                                   Qt::BlockingQueuedConnection);
-
+#ifdef Q_OS_WIN
     while (Device->isStreaming)
         Sleep(1);
+#endif
+#ifdef Q_OS_LINUX
+    while (Device->isStreaming)
+        usleep(1000);
+#endif
 
     QMetaObject::invokeMethod(Device ,
                               "CloseDevice" ,
@@ -197,8 +202,15 @@ void MainWindow::on_buttonCloseDevice_clicked()
                                   "StopStream" ,
                                   Qt::BlockingQueuedConnection);
 
+#ifdef Q_OS_WIN
     while (Device->isStreaming)
         Sleep(1);
+#endif
+#ifdef Q_OS_LINUX
+    while (Device->isStreaming)
+        usleep(1000);
+#endif
+
 
     QMetaObject::invokeMethod(Device ,
                               "CloseDevice" ,
@@ -267,8 +279,15 @@ void MainWindow::on_buttonStopStream_clicked()
                               "StopStream" ,
                               Qt::BlockingQueuedConnection);
 
-    while(Device->isStreaming)
+#ifdef Q_OS_WIN
+    while (Device->isStreaming)
         Sleep(1);
+#endif
+#ifdef Q_OS_LINUX
+    while (Device->isStreaming)
+        usleep(1000);
+#endif
+
 
     ui->buttonStartStream->setEnabled(true);
     ui->buttonStopStream->setEnabled(false);
@@ -349,6 +368,18 @@ void MainWindow::FFTCalcSetup()
                                 ui->checkChannel4->isChecked()
                                 );
 }
+
+
+void MainWindow::FillCalcSetup()
+{
+    QMetaObject::invokeMethod(Proc ,
+                              "enableFillCalc" ,
+                              Qt::BlockingQueuedConnection,
+                              Q_ARG(bool, ui->checkFillCalc->isChecked()),
+                              Q_ARG(int, ui->comboBoxADC->currentIndex())
+                              );
+}
+
 
 void MainWindow::on_comboBoxADC_currentIndexChanged(int index)
 {
